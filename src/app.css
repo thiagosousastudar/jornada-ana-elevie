@@ -126,3 +126,7 @@ video.midia { max-height: 70vh; background: #000; }
 .rec-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 600; }
 .rec-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--red); animation: rec-pisca 1s infinite; }
 @keyframes rec-pisca { 50% { opacity: .3; } }
+
+/* Foto de comprovação: câmera ou galeria */
+.foto-opcoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.foto-opcoes .btn { flex: 1 1 120px; justify-content: center; white-space: nowrap; }

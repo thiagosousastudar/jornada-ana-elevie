@@ -307,7 +307,11 @@ function formularioTarefa(t, dia, r, x) {
         <div><strong>${ic(ig ? 'photo' : 'camera')} ${previa ? 'Trocar foto' : ig ? 'Escolher o print' : 'Tirar ou escolher foto'}</strong></div>
         <div class="tiny muted">${ig ? 'Um print em que dá para ver as marcações. Só a equipe de revisão vê.' : 'Fotografe a comida ou a atividade, não o seu corpo. Só a equipe de revisão vê.'}</div>
       </label>
-      <input id="foto-in" type="file" accept="image/*" ${ig ? '' : 'capture="environment"'} hidden data-act="foto">
+      <input id="foto-in" type="file" accept="image/*" hidden data-act="foto">
+      <div class="foto-opcoes">
+        ${ig ? '' : `<label class="btn sm soft" for="foto-cam">${ic('camera')} Tirar foto</label><input id="foto-cam" type="file" accept="image/*" capture="environment" hidden data-act="foto">`}
+        <label class="btn sm ${ig ? 'soft' : 'ghost'}" for="foto-gal">${ic('photo')} Galeria</label><input id="foto-gal" type="file" accept="image/*" hidden data-act="foto">
+      </div>
       <div data-errfor="foto"></div></div>`;
     campos = (ig ? campos + blocoFoto + depois : blocoFoto + campos);
   } else {
