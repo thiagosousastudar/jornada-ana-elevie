@@ -1,0 +1,47 @@
+# Jornada Ana + Eleviê
+
+App do desafio de 21 dias (alimentação, movimento e mentalidade) da Eleviê com a Dra. Nelly Kim e a Ana Paula Moura.
+Baseado nos documentos *Levantamento_MVP_Jornada_Ana_Elevie.docx* (requisitos) e *21 Dias* (cronograma, textos, roteiros e participação da Dra. Nelly).
+
+## Estrutura
+
+| Pasta | O que é |
+|---|---|
+| `src/` | App de produção (Vite + JavaScript + Supabase) |
+| `supabase/migrations/` | Banco: tabelas, regras de acesso (RLS), proteções e bucket de fotos |
+| `supabase/seed.sql` | Conteúdo da Edição 1 (gerado de `prototipo/data.js`) |
+| `scripts/` | `gerar-seed.mjs` e `testar-banco.mjs` (51 testes de acesso) |
+| `prototipo/` | Protótipo clicável com dados fictícios (referência de telas e regras; ver `prototipo/README.md`) |
+| `docs/PRODUCAO.md` | Passo a passo de GitHub, Supabase, Google e Vercel |
+
+## Comandos
+
+```bash
+npm install
+npm run dev          # app em http://localhost:5173 (precisa do .env.local)
+npm run test:db      # aplica migrações + seed num Postgres local e testa as regras de acesso
+npm run build        # gera dist/ (o mesmo que a Vercel faz)
+npm run seed:gerar   # regenera supabase/seed.sql a partir do protótipo
+npm run prototipo    # protótipo clicável em http://localhost:3200
+```
+
+## Segurança e privacidade (resumo)
+
+- **Quem vê o quê é regra do banco (RLS)**, não do app:
+  - a participante só vê os próprios registros;
+  - a equipe vê os registros e as fotos de comprovação, mas não as respostas privadas;
+  - só a Dra. Nelly aprova conteúdo de saúde.
+- **Caixinha anônima**: a autoria fica numa tabela que só a autora lê. Ninguém da equipe consegue "desanonimizar".
+- **Antes e depois do corpo** (dias 1 e 21): fica só no aparelho (IndexedDB) e nunca é enviado.
+- **Fotos de comprovação**: bucket privado, cada participante só grava na própria pasta, e a equipe lê para revisar.
+- **Consentimentos**: viram histórico (aceite e revogação), sem sobrescrever.
+
+## Etapas
+
+1. **Fundação (feita)**:
+   - estrutura do projeto, banco com RLS testado, bucket de fotos e seed dos 21 dias;
+   - login com Google e com código no e-mail, perfil (nome e apelido), entrada na jornada com consentimentos;
+   - tela "Hoje" lendo do banco, deploy na Vercel e CI no GitHub.
+2. **Telas da participante**: envio das tarefas com foto, "não consegui", check-in com enquete e balanço, caixinha, compartilhar no Instagram, antes e depois privado, progresso e avisos (portados do protótipo).
+3. **Telas da equipe**: painel, revisão em grade, caixinha (triagem e Dra. Nelly), check-ins, configurar dias e semanas, exportação CSV.
+4. **Lançamento**: checklist do `docs/PRODUCAO.md`, piloto e campanha.

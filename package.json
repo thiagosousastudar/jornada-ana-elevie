@@ -1,0 +1,28 @@
+{
+  "name": "jornada-ana-elevie",
+  "version": "0.1.0",
+  "private": true,
+  "description": "App da Jornada Ana + Eleviê: desafio de 21 dias (alimentação, movimento e mentalidade).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "prototipo": "node serve.js",
+    "seed:gerar": "node scripts/gerar-seed.mjs",
+    "db:link": "supabase link",
+    "db:push": "supabase db push",
+    "db:seed": "supabase db push --include-seed",
+    "test:db": "node scripts/testar-banco.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.2.17",
+    "vite": "^6.4.4"
+  }
+}

@@ -1,0 +1,19 @@
+/* Ajustes do app real sobre o visual do protótipo: sem moldura de iPhone,
+   coluna central no computador e áreas seguras do celular (notch, barra inferior). */
+
+.app-real .phone-wrap { padding: 0; }
+.app-real .phone {
+  max-width: 520px; height: auto; min-height: 100dvh; border: 0; border-radius: 0; box-shadow: none; overflow: visible; margin: 0 auto;
+}
+.app-real .p-scroll { overflow: visible; padding-top: env(safe-area-inset-top); }
+.app-real .p-body { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+.app-real .tabbar {
+  position: fixed; left: 50%; right: auto; transform: translateX(-50%); width: min(492px, calc(100% - 24px));
+  bottom: max(14px, env(safe-area-inset-bottom));
+}
+.app-real .tabbar a:active { transform: scale(.94); }
+.app-real .admin { min-height: 100dvh; }
+.app-real .side { top: 0; height: 100dvh; }
+@media (min-width: 760px) {
+  .app-real .phone { box-shadow: 0 0 0 1px var(--sep); }
+}

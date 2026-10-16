@@ -1,0 +1,23 @@
+# Roda a cada push e pull request: testa o banco (migrações + regras de acesso) e o build.
+# O deploy em si é feito pela Vercel, conectada ao repositório.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Banco (migrações, seed e RLS)
+        run: npm run test:db
+      - name: Build
+        run: npm run build
