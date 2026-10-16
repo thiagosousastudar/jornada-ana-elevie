@@ -99,3 +99,21 @@ body:not(:has(.tabbar)) .update-bar { bottom: max(16px, env(safe-area-inset-bott
   .two-col, .cols-3, .review { grid-template-columns: minmax(0, 1fr); }
 }
 .card, .notice, .cx-txt, .cx-resp, .task-card .t, td { overflow-wrap: anywhere; }
+
+/* Menu lateral da equipe recolhível (só no computador) */
+.side .brand { position: relative; }
+.brand-t { flex: 1; min-width: 0; }
+.side-toggle { flex: none; width: 32px; height: 32px; border: 0; border-radius: 8px; background: none; color: var(--ink-2); cursor: pointer; display: grid; place-items: center; }
+.side-toggle:hover { background: var(--fill); color: var(--ink); }
+.side-toggle .i { width: 20px; height: 20px; }
+@media (min-width: 861px) {
+  .app-real .admin { transition: grid-template-columns .2s ease; }
+  .app-real .admin.recolhido { grid-template-columns: 68px 1fr; }
+  .admin.recolhido .side { padding-left: 10px; padding-right: 10px; overflow: hidden; }
+  .admin.recolhido .brand { flex-direction: column; padding: 4px 0 12px; gap: 8px; }
+  .admin.recolhido .brand-t, .admin.recolhido .side-txt, .admin.recolhido .side-extra { display: none; }
+  .admin.recolhido .side a { justify-content: center; padding: 9px 0; position: relative; }
+  .admin.recolhido .side a .count { position: absolute; top: 1px; right: 2px; font-size: 10px; padding: 0 5px; }
+  .admin.recolhido .side hr { margin: 12px 4px; }
+}
+@media (max-width: 860px) { .side-toggle { display: none; } }

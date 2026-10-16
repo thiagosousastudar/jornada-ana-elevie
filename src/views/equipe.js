@@ -86,6 +86,11 @@ export async function preparar(sub) {
 // ---------------------------------------------------------------------------
 // Estrutura
 // ---------------------------------------------------------------------------
+// Menu lateral recolhível no computador (a escolha fica salva neste navegador).
+const CHAVE_MENU = 'jornada-menu-recolhido';
+const menuRecolhido = () => { try { return localStorage.getItem(CHAVE_MENU) === '1'; } catch { return false; } };
+const ICONE_MENU_LATERAL = '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><path d="M9.5 4.5v15"/></svg>';
+
 function estrutura(atual, conteudo) {
   const nRev = pendentesRevisao().length;
   const nCx = S.eq.caixinha.filter((c) => c.status === 'nova').length;
@@ -93,15 +98,19 @@ function estrutura(atual, conteudo) {
     ['dias', 'Configurar dias', 'calendar'], ['campanha', 'Campanha', 'leaf'], ['acessos', 'Acessos e senhas', 'lock'], ['exportar', 'Exportar', 'download']];
   const contador = { revisao: nRev, caixinha: nCx };
   const opcoes = ['<option value="">Dia real</option>'].concat(Array.from({ length: 21 }, (_, i) => `<option value="${i + 1}" ${S.diaSim === i + 1 ? 'selected' : ''}>Simular dia ${i + 1}</option>`)).join('');
-  return `<div class="admin">
+  const recolhido = menuRecolhido();
+  return `<div class="admin ${recolhido ? 'recolhido' : ''}">
     <aside class="side">
-      <div class="brand"><span class="brand-ic">${ic('leaf')}</span><span>Desafio 21 Dias<small>${esc(S.campanha.nome)} · Dia ${limiteDia()} de 21</small></span></div>
-      ${itens.map(([k, l, i]) => `<a href="#/a/${k === 'painel' ? '' : k}" class="${atual === k ? 'on' : ''}"><span class="side-l">${ic(i)}${l}</span>${contador[k] ? `<span class="count">${contador[k]}</span>` : ''}</a>`).join('')}
+      <div class="brand"><span class="brand-ic">${ic('leaf')}</span><span class="brand-t">Desafio 21 Dias<small>${esc(S.campanha.nome)} · Dia ${limiteDia()} de 21</small></span>
+        <button type="button" class="side-toggle" data-act="menu-recolher" aria-label="${recolhido ? 'Expandir menu' : 'Recolher menu'}" title="${recolhido ? 'Expandir menu' : 'Recolher menu'}">${ICONE_MENU_LATERAL}</button></div>
+      ${itens.map(([k, l, i]) => `<a href="#/a/${k === 'painel' ? '' : k}" class="${atual === k ? 'on' : ''}" title="${l}"><span class="side-l">${ic(i)}<span class="side-txt">${l}</span></span>${contador[k] ? `<span class="count">${contador[k]}</span>` : ''}</a>`).join('')}
       <hr>
-      <a href="#/hoje"><span class="side-l">${ic('house')}Ver como participante</span></a>
-      <label class="field" style="margin:12px 8px 0"><span>Testar a jornada</span><select class="input" data-act="dia-sim">${opcoes}</select></label>
-      <p class="tiny muted" style="margin:6px 10px">Só muda o que você vê. As participantes seguem o calendário real.</p>
-      <p style="margin:12px 8px 0"><button class="linkbtn" data-act="sair">Sair</button></p>
+      <a href="#/hoje" title="Ver como participante"><span class="side-l">${ic('house')}<span class="side-txt">Ver como participante</span></span></a>
+      <div class="side-extra">
+        <label class="field" style="margin:12px 8px 0"><span>Testar a jornada</span><select class="input" data-act="dia-sim">${opcoes}</select></label>
+        <p class="tiny muted" style="margin:6px 10px">Só muda o que você vê. As participantes seguem o calendário real.</p>
+        <p style="margin:12px 8px 0"><button class="linkbtn" data-act="sair">Sair</button></p>
+      </div>
     </aside>
     <main class="main enter">${conteudo}</main>
   </div>`;
@@ -354,7 +363,7 @@ function dias() {
   const ultima = (n) => S.eq.alteracoes.find((a) => a.dia === n);
   const linhas = S.dias.map((d) => {
     const u = ultima(d.numero);
-    return `<tr class="click" data-act="abrir-dia" data-n="${d.numero}"><td><strong>${d.numero}</strong></td><td class="tiny muted">${fmtCurto(S.campanha, d.numero)}</td>
+    return `<tr class="click" data-act="abrir-dia" data-n="${d.numero}"><td><strong>${d.numero}</strong></td><td class="tiny muted" style="white-space:nowrap">${fmtCurto(S.campanha, d.numero)}</td>
       <td><strong>${esc(d.tema)}</strong><div class="tiny muted">${esc(semanaNome(d.semana))}</div>
         ${d.nelly ? `<div class="tiny" style="margin-top:4px">${ic('play', 'e')} Dra. Nelly · <span class="badge ${d.nelly.status === 'aprovado' ? 'b-aprovada' : 'b-aguardando_revisao'}">${NELLY_STATUS[d.nelly.status]}</span></div>` : ''}
         ${d.enquete ? '<div class="tiny muted">enquete no check-in</div>' : ''}${d.cta ? '<div class="tiny muted">botão de avaliação</div>' : ''}</td>
@@ -500,6 +509,10 @@ async function triar(id, dest) {
 }
 
 export const cliques = {
+  'menu-recolher': () => {
+    try { localStorage.setItem(CHAVE_MENU, menuRecolhido() ? '0' : '1'); } catch { /* sem storage */ }
+    app.render();
+  },
   'abrir-participante': (el) => { location.hash = `#/a/participante/${el.dataset.id}`; },
   'abrir-dia': (el) => { location.hash = `#/a/dias/${el.dataset.n}`; },
   aprovar: async (el) => {
