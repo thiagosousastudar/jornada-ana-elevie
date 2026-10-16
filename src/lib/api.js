@@ -40,7 +40,40 @@ export async function carregarDias(campanhaId) {
     d.tarefas.sort((a, b) => a.ordem - b.ordem);
     d.nelly = Array.isArray(d.conteudos_nelly) ? d.conteudos_nelly[0] || null : d.conteudos_nelly;
   });
+  await linksDasMidias(dias);
   return dias;
+}
+
+// Áudio/vídeo da Dra. Nelly: links temporários (bucket privado; a participante só abre o aprovado).
+async function linksDasMidias(dias) {
+  const comMidia = dias.filter((d) => d.nelly && d.nelly.midia_url);
+  if (!comMidia.length) return;
+  const { data } = await supabase.storage.from('conteudos').createSignedUrls(comMidia.map((d) => d.nelly.midia_url), 6 * 3600);
+  (data || []).forEach((l, i) => { if (l && l.signedUrl) comMidia[i].nelly.midia_link = l.signedUrl; });
+}
+
+export async function enviarMidiaNelly(dia, arquivo, extensao, novoStatus) {
+  const tipo = (arquivo.type || '').startsWith('video/') ? 'video' : 'audio';
+  const caminho = `${dia.id}/${tipo}-${Date.now()}.${extensao}`;
+  ok(await supabase.storage.from('conteudos').upload(caminho, arquivo, { contentType: arquivo.type || undefined, upsert: false }));
+  const anterior = dia.nelly.midia_url;
+  const campos = { midia_url: caminho, formato: tipo === 'video' ? 'Vídeo' : 'Áudio' };
+  if (novoStatus) campos.status = novoStatus;
+  try {
+    ok(await supabase.from('conteudos_nelly').update(campos).eq('dia_id', dia.id));
+  } catch (e) {
+    await supabase.storage.from('conteudos').remove([caminho]);
+    throw e;
+  }
+  if (anterior) await supabase.storage.from('conteudos').remove([anterior]);
+}
+
+export async function removerMidiaNelly(dia, novoStatus) {
+  const anterior = dia.nelly.midia_url;
+  const campos = { midia_url: null };
+  if (novoStatus) campos.status = novoStatus;
+  ok(await supabase.from('conteudos_nelly').update(campos).eq('dia_id', dia.id));
+  if (anterior) await supabase.storage.from('conteudos').remove([anterior]);
 }
 
 export async function minhaInscricao(campanhaId, perfilId) {

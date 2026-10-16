@@ -2,7 +2,7 @@
 import { S, app } from '../estado.js';
 import {
   $, esc, FRENTES, ENVIADAS, FEITO, NOME_PAPEL, ehEquipe, chamado, toast, erros, badge, anel, fmtDT, shell,
-  diaHoje, pedeFoto, tipoDesc, semanaNome,
+  diaHoje, pedeFoto, tipoDesc, semanaNome, playerMidia,
 } from '../ui.js';
 import * as api from '../lib/api.js';
 import { ic } from '../lib/icones.js';
@@ -117,7 +117,7 @@ function nellyCard(dia) {
   if (!aprovado && !ehEquipe()) return '';
   return `<div class="card nelly" style="margin-bottom:14px">
     <div class="nelly-head"><span class="nelly-av">NK</span><div><div class="tiny muted">${esc(nl.formato)} da Dra. Nelly Kim</div><strong>${esc(nl.titulo)}</strong></div></div>
-    <div class="player"><span>${ic('play')}</span>${esc(nl.formato)} da Dra. Nelly</div>
+    ${nl.midia_link ? playerMidia(nl) : (ehEquipe() ? '<p class="tiny muted" style="margin:0 0 8px">Ainda sem áudio ou vídeo enviado (só a equipe vê este aviso).</p>' : '')}
     <p class="small" style="margin:0 0 6px">${esc(nl.resumo)}</p>
     ${nl.fecho ? `<p class="small muted" style="margin:0 0 8px"><em>“${esc(nl.fecho)}”</em></p>` : ''}
     ${aprovado ? `<span class="badge b-aprovada">${ic('check')} Aprovado pela Dra. Nelly</span>` : `<span class="badge b-aguardando_revisao">Ainda não aprovado (só a equipe vê)</span>`}

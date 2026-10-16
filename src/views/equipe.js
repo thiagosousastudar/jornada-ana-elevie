@@ -1,7 +1,7 @@
 // Área da equipe: painel, revisão de evidências, caixinha, check-ins, configuração e exportação.
 import { S, app } from '../estado.js';
 import {
-  $, esc, FRENTES, STATUS, ENVIADAS, FEITO, NOME_PAPEL, toast, erros, badge, fmtDT, diaHoje, tipoDesc, semanaNome, chamado,
+  $, esc, FRENTES, STATUS, ENVIADAS, FEITO, NOME_PAPEL, toast, erros, badge, fmtDT, diaHoje, tipoDesc, semanaNome, chamado, playerMidia,
 } from '../ui.js';
 import * as api from '../lib/api.js';
 import { ic } from '../lib/icones.js';
@@ -374,6 +374,67 @@ function dias() {
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Dia</th><th>Data</th><th>Tema</th><th>Alimentação</th><th>Movimento</th><th>Mentalidade</th><th>Compartilhar</th><th>Última alteração</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
 }
 
+// ---------------------------------------------------------------------------
+// Áudio ou vídeo da Dra. Nelly: enviar arquivo, gravar no app, ouvir, trocar e remover.
+// ---------------------------------------------------------------------------
+const gravacao = { rec: null, diaId: null, partes: [], inicio: 0, timer: null, enviando: null };
+const EXTENSOES = { 'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/ogg': 'ogg', 'audio/opus': 'opus', 'audio/webm': 'webm', 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm' };
+const extDe = (arquivo) => EXTENSOES[(arquivo.type || '').split(';')[0]] || (arquivo.name || '').split('.').pop().toLowerCase() || 'bin';
+const LIMITE_MIDIA = 50 * 1024 * 1024;
+
+function midiaNellyEditor(d) {
+  const nl = d.nelly;
+  const gravandoAqui = gravacao.rec && gravacao.diaId === d.id;
+  const enviandoAqui = gravacao.enviando === d.id;
+  const temGravador = typeof window !== 'undefined' && 'MediaRecorder' in window && navigator.mediaDevices;
+  let corpo;
+  if (enviandoAqui) {
+    corpo = '<div class="notice info small"><strong>Enviando…</strong>Não feche esta tela até terminar.</div>';
+  } else if (gravandoAqui) {
+    corpo = `<div class="rec-bar"><span class="rec-dot"></span><span id="rec-tempo">Gravando 0:00</span>
+      <button type="button" class="btn sm" data-act="nl-parar" data-dia="${d.id}">Parar e enviar</button>
+      <button type="button" class="btn sm ghost" data-act="nl-cancelar">Cancelar</button></div>`;
+  } else {
+    corpo = `${nl.midia_url ? playerMidia(nl) || '<p class="small muted">Arquivo enviado (o link abre depois de salvar).</p>' : '<p class="small muted" style="margin:0 0 8px">Ainda sem áudio ou vídeo. As participantes veem só o título e o resumo.</p>'}
+      <div class="btn-row" style="margin-top:8px">
+        <label class="btn sm ${nl.midia_url ? 'ghost' : ''}" for="nl-arq-${d.id}">${ic('tray')} ${nl.midia_url ? 'Trocar arquivo' : 'Enviar arquivo'}</label>
+        <input id="nl-arq-${d.id}" type="file" accept="audio/*,video/*" hidden data-act="nl-midia" data-dia="${d.id}">
+        ${temGravador ? `<button type="button" class="btn sm soft" data-act="nl-gravar" data-dia="${d.id}">${ic('bubble')} Gravar áudio agora</button>` : ''}
+        ${nl.midia_url ? `<button type="button" class="btn sm ghost" data-act="nl-remover" data-dia="${d.id}">Remover</button>` : ''}
+      </div>
+      <p class="tiny muted" style="margin:8px 0 0">Áudio em MP3 ou M4A (gravador do iPhone) toca em todos os celulares. Vídeo em MP4, até 50 MB.${podeAprovarConteudo() ? '' : ' Trocar a mídia devolve o conteúdo para a revisão da Dra. Nelly.'}</p>`;
+  }
+  return `<div class="midia-box"><div class="tiny muted" style="font-weight:600;margin-bottom:6px">${nl.formato === 'Vídeo' ? 'Vídeo' : 'Áudio'} da Dra. Nelly</div>${corpo}</div>`;
+}
+
+async function enviarMidia(diaId, arquivo) {
+  const d = S.dias.find((x) => x.id === diaId);
+  if (!d || !d.nelly) return;
+  if (arquivo.size > LIMITE_MIDIA) { toast('Arquivo maior que 50 MB. Comprima o vídeo ou envie um áudio.'); return; }
+  if (!/^(audio|video)\//.test(arquivo.type || '') && !/\.(mp3|m4a|aac|wav|ogg|opus|mp4|mov|webm)$/i.test(arquivo.name || '')) { toast('Escolha um arquivo de áudio ou vídeo.'); return; }
+  gravacao.enviando = diaId; app.render();
+  try {
+    await api.enviarMidiaNelly(d, arquivo, extDe(arquivo));
+    await api.registrarAlteracao(S.campanha.id, d.numero, S.perfil.id, 'Enviou mídia da Dra. Nelly');
+    S.dias = await api.carregarDias(S.campanha.id);
+    toast(podeAprovarConteudo() ? 'Mídia enviada.' : 'Mídia enviada. Aguarda a aprovação da Dra. Nelly.');
+  } catch (e) {
+    toast('Não foi possível enviar: ' + e.message);
+  } finally {
+    gravacao.enviando = null;
+    app.render();
+  }
+}
+
+function pararGravacao(enviar) {
+  const { rec } = gravacao;
+  if (!rec) return;
+  gravacao.enviarAoParar = enviar;
+  clearInterval(gravacao.timer);
+  rec.stop();
+  rec.stream.getTracks().forEach((t) => t.stop());
+}
+
 function diaEditar(n) {
   const d = S.dias.find((x) => x.numero === n);
   if (!d) return '<p>Dia não encontrado.</p>';
@@ -401,6 +462,7 @@ function diaEditar(n) {
         <div class="two-col"><div><label class="field"><span>Título</span><input class="input" name="nl-tit" value="${esc(nl.titulo)}"></label>
           <label class="field"><span>Situação</span><select class="input" name="nl-status">${statusOpcoes}</select></label></div>
           <label class="field"><span>Resumo (aparece para as participantes)</span><textarea class="input" name="nl-res" rows="5">${esc(nl.resumo)}</textarea></label></div>
+        ${midiaNellyEditor(d)}
         <p class="tiny muted" style="margin:0">Só ${esc(NOME_PAPEL.nelly)} ou admin podem marcar como aprovado.</p></div>` : ''}
       <div class="cols-3">${d.tarefas.map(tarefa).join('')}</div>
     </form>`;
@@ -521,6 +583,41 @@ async function triar(id, dest) {
 }
 
 export const cliques = {
+  'nl-gravar': async (el) => {
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { toast('Permita o uso do microfone para gravar.'); return; }
+    // MP4 toca em iPhone e Android; WebM fica de reserva (alguns navegadores só gravam nele).
+    const tipo = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].find((t) => MediaRecorder.isTypeSupported(t)) || '';
+    const rec = new MediaRecorder(stream, tipo ? { mimeType: tipo } : undefined);
+    Object.assign(gravacao, { rec, diaId: el.dataset.dia, partes: [], inicio: Date.now(), enviarAoParar: false });
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) gravacao.partes.push(e.data); };
+    rec.onstop = () => {
+      const blob = new Blob(gravacao.partes, { type: (rec.mimeType || tipo || 'audio/webm').split(';')[0] });
+      const diaId = gravacao.diaId;
+      Object.assign(gravacao, { rec: null, diaId: null, partes: [] });
+      if (gravacao.enviarAoParar && blob.size) enviarMidia(diaId, blob); else app.render();
+    };
+    rec.start(1000);
+    gravacao.timer = setInterval(() => {
+      const s = Math.floor((Date.now() - gravacao.inicio) / 1000);
+      const el2 = document.getElementById('rec-tempo');
+      if (el2) el2.textContent = `Gravando ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    }, 500);
+    app.render();
+  },
+  'nl-parar': () => pararGravacao(true),
+  'nl-cancelar': () => pararGravacao(false),
+  'nl-remover': async (el) => {
+    const d = S.dias.find((x) => x.id === el.dataset.dia);
+    if (!d || !d.nelly) return;
+    try {
+      await api.removerMidiaNelly(d);
+      await api.registrarAlteracao(S.campanha.id, d.numero, S.perfil.id, 'Removeu a mídia da Dra. Nelly');
+      S.dias = await api.carregarDias(S.campanha.id);
+      toast('Mídia removida.');
+    } catch (e) { toast(e.message); }
+    app.render();
+  },
   'menu-recolher': () => {
     try { localStorage.setItem(CHAVE_MENU, menuRecolhido() ? '0' : '1'); } catch { /* sem storage */ }
     app.render();
@@ -607,6 +704,11 @@ export const cliques = {
 };
 
 export const mudancas = {
+  'nl-midia': (el) => {
+    const arquivo = el.files && el.files[0];
+    el.value = '';
+    if (arquivo) enviarMidia(el.dataset.dia, arquivo);
+  },
   'dia-sim': (el) => {
     const n = Number(el.value) || null;
     S.diaSim = n;

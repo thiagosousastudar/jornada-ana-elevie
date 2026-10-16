@@ -100,3 +100,11 @@ export function tipoDesc(t) {
 }
 
 export const semanaNome = (n) => `Semana ${n} · ${((S.campanha.semanas || [])[n - 1] || {}).nome || ''}`;
+
+// Áudio ou vídeo da Dra. Nelly (link temporário do Storage). O caminho diz o tipo: {dia}/audio-… ou {dia}/video-…
+export function playerMidia(nl) {
+  if (!nl || !nl.midia_link) return '';
+  return /(^|\/)audio-/.test(nl.midia_url || '')
+    ? `<audio class="midia" controls preload="metadata" src="${esc(nl.midia_link)}"></audio>`
+    : `<video class="midia" controls playsinline preload="metadata" src="${esc(nl.midia_link)}"></video>`;
+}

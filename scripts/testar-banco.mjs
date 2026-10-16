@@ -162,6 +162,23 @@ r = await tenta(U.bia, `update public.perfis set trocar_senha = false where id =
 r = await tenta(U.equipe, "select public.redefinir_senha('nelly@elevie.com', 'nova123')"); check(!r.ok && /admin/.test(r.erro), 'equipe não redefine a senha da Dra. Nelly');
 r = await tenta(ADMIN, "select public.redefinir_senha('nelly@elevie.com', 'nova123')"); check(r.ok, 'admin redefine a senha de alguém da equipe');
 
+console.log('Áudio e vídeo da Dra. Nelly:');
+const d14 = (await db.query(`select id from public.dias where numero = 14`)).rows[0].id;
+const midia = `${d14}/audio-1.m4a`;
+r = await tenta(U.bia, `insert into storage.objects (bucket_id, name) values ('conteudos', '${d14}/x.m4a')`); check(!r.ok, 'participante não envia mídia da Dra. Nelly');
+r = await tenta(U.equipe, `insert into storage.objects (bucket_id, name) values ('conteudos', '${midia}')`); check(r.ok, 'equipe envia o áudio');
+await tenta(U.equipe, `update public.conteudos_nelly set midia_url = '${midia}' where dia_id = '${d14}'`);
+r = await tenta(U.bia, `select count(*) n from storage.objects where bucket_id = 'conteudos'`); check(Number(r.rows[0].n) === 0, 'participante não ouve antes da aprovação');
+await tenta(U.nelly, `update public.conteudos_nelly set status = 'aprovado' where dia_id = '${d14}'`);
+r = await tenta(U.bia, `select count(*) n from storage.objects where bucket_id = 'conteudos'`); check(Number(r.rows[0].n) === 1, 'participante ouve depois da aprovação');
+await tenta(U.equipe, `insert into storage.objects (bucket_id, name) values ('conteudos', '${d14}/audio-2.m4a')`);
+await tenta(U.equipe, `update public.conteudos_nelly set midia_url = '${d14}/audio-2.m4a' where dia_id = '${d14}'`);
+check(await cnt(`select count(*) n from public.conteudos_nelly where dia_id = '${d14}' and status = 'em_revisao'`) === 1, 'equipe trocar a mídia devolve para revisão');
+r = await tenta(U.bia, `select count(*) n from storage.objects where bucket_id = 'conteudos'`); check(Number(r.rows[0].n) === 0, 'mídia trocada some para as participantes até nova aprovação');
+await tenta(U.nelly, `update public.conteudos_nelly set status = 'aprovado' where dia_id = '${d14}'`);
+await tenta(U.nelly, `update public.conteudos_nelly set midia_url = '${midia}' where dia_id = '${d14}'`);
+check(await cnt(`select count(*) n from public.conteudos_nelly where dia_id = '${d14}' and status = 'aprovado'`) === 1, 'a Dra. Nelly troca a própria mídia sem perder a aprovação');
+
 console.log('Excluir cadastro:');
 r = await tenta(U.camila, `select public.enviar_caixinha('${camp}', 6, 'Pergunta com meu nome', 'rotina', false) as id`);
 const msgNome = r.rows[0].id;

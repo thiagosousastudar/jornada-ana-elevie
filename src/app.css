@@ -117,3 +117,12 @@ body:not(:has(.tabbar)) .update-bar { bottom: max(16px, env(safe-area-inset-bott
   .admin.recolhido .side hr { margin: 12px 4px; }
 }
 @media (max-width: 860px) { .side-toggle { display: none; } }
+
+/* Áudio e vídeo da Dra. Nelly */
+.midia { display: block; width: 100%; margin: 4px 0 10px; border-radius: 12px; }
+audio.midia { height: 44px; }
+video.midia { max-height: 70vh; background: #000; }
+.midia-box { background: var(--surface); border-radius: 14px; padding: 12px; margin: 0 0 12px; box-shadow: 0 0 0 1px var(--sep); }
+.rec-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 600; }
+.rec-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--red); animation: rec-pisca 1s infinite; }
+@keyframes rec-pisca { 50% { opacity: .3; } }
