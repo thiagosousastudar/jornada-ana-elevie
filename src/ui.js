@@ -65,9 +65,14 @@ export function shell(inner, aba) {
 export const carregando = (msg = 'Carregando…') =>
   shell(`<div class="p-body login" style="text-align:center;padding-top:120px"><div class="logo">${ic('leaf')}</div><p class="muted">${esc(msg)}</p></div>`);
 
-export const falha = (msg) => shell(`<div class="p-body login"><div class="welcome-hero"><div class="logo">${ic('warn')}</div><h1>Algo deu errado</h1></div>
-  <div class="notice bad"><strong>Não conseguimos carregar</strong>${esc(msg)}</div>
+export function falha(msg) {
+  const semRede = (typeof navigator !== 'undefined' && navigator.onLine === false) || /failed to fetch|network|load failed/i.test(String(msg));
+  const titulo = semRede ? 'Sem conexão' : 'Algo deu errado';
+  const texto = semRede ? 'Confira a internet do celular e tente de novo. Seus registros enviados continuam salvos.' : msg;
+  return shell(`<div class="p-body login"><div class="welcome-hero"><div class="logo">${ic(semRede ? 'bell' : 'warn')}</div><h1>${titulo}</h1></div>
+  <div class="notice ${semRede ? 'warn' : 'bad'}"><strong>${semRede ? 'Você está sem internet' : 'Não conseguimos carregar'}</strong>${esc(texto)}</div>
   <button class="btn block" data-act="recarregar">Tentar de novo</button></div>`);
+}
 
 // Dia da jornada em vigor. A equipe pode simular outro dia para testar (só na tela dela).
 export function diaHoje() {

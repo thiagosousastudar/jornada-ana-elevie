@@ -90,6 +90,24 @@ select public.definir_papel('dra.nelly@email.com', 'nelly');
 4. Para testar antes do início da campanha, use **Testar a jornada** no menu da equipe: simula um dia só na sua tela.
 5. Dados de teste: apague pelo SQL Editor (`delete from auth.users where email = '...'` remove a conta e tudo que ela criou) e as fotos pelo Storage.
 
+## 3.2 App instalável (PWA) no Android e no iPhone
+
+O app é um PWA: a participante instala pelo navegador, sem loja de aplicativos.
+
+- **Android (Chrome):** o app mostra o botão **Instalar**. Se o navegador não oferecer, abre as instruções (menu ⋮ › Instalar app).
+- **iPhone (Safari):** a Apple não permite botão de instalar. O app mostra o passo a passo: Compartilhar › **Adicionar à Tela de Início**. Dentro do navegador do Instagram ou do Facebook a instalação não funciona; o app avisa para abrir no Safari.
+- **Funciona sem rede?** Abre a "casca" do app, mas registros e fotos precisam de internet. Sem rede, o app mostra uma mensagem clara e nada é perdido.
+- **Atualizações:** a cada publicação na Vercel, quem já instalou vê o aviso "Tem uma versão nova do app" e toca em **Atualizar**.
+- **Ícones:** `public/icons` (192 e 512 para o Android, versões "maskable" que cortam em círculo e `apple-touch-icon.png` de 180 px, de cantos cheios, para o iPhone).
+- **Testar a versão de produção no computador**, com os mesmos cabeçalhos de segurança da Vercel: `npm run preview:prod` (abre em http://localhost:4173).
+
+### Checklist da Vercel
+1. Importar o repositório (framework **Vite**, comando `npm run build`, saída `dist`: já vêm do `vercel.json`).
+2. Variáveis de ambiente, para **Production** e **Preview**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_CAMPANHA_SLUG`, `VITE_WHATSAPP_SUPORTE`.
+3. Depois do primeiro deploy, copiar o endereço (`https://...vercel.app`) para o Supabase em **Authentication › URL Configuration** (Site URL e Redirect URLs).
+4. Abrir no celular, entrar e seguir "Instalar o app" em Avisos.
+5. A região de São Paulo (`gru1`), o HTTPS e os cabeçalhos de segurança (CSP, HSTS) já estão no `vercel.json`.
+
 ## 4. Rodar no computador
 
 ```bash

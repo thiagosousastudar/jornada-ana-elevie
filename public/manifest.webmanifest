@@ -1,15 +1,84 @@
 {
+  "id": "/",
   "name": "Jornada Ana + Eleviê",
   "short_name": "Jornada",
   "description": "21 dias de hábitos: alimentação, movimento e mentalidade.",
   "lang": "pt-BR",
+  "dir": "ltr",
   "start_url": "/#/hoje",
+  "scope": "/",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
   "background_color": "#f2f2f7",
   "theme_color": "#2c8a5a",
+  "categories": [
+    "health",
+    "lifestyle",
+    "fitness"
+  ],
   "icons": [
-    { "src": "/icons/icone-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icone-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/icons/icone.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "/icons/icone-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icone-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icone-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Hoje",
+      "short_name": "Hoje",
+      "url": "/#/hoje",
+      "icons": [
+        {
+          "src": "/icons/icone-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Check-in",
+      "short_name": "Check-in",
+      "url": "/#/checkin",
+      "icons": [
+        {
+          "src": "/icons/icone-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Caixinha",
+      "short_name": "Caixinha",
+      "url": "/#/caixinha",
+      "icons": [
+        {
+          "src": "/icons/icone-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }

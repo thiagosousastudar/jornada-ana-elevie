@@ -11,6 +11,7 @@ import { S, app } from './estado.js';
 import { $, esc, toast, erros, shell, carregando, falha, ehEquipe, chamado } from './ui.js';
 import * as part from './views/participante.js';
 import * as eq from './views/equipe.js';
+import * as instalar from './views/instalar.js';
 
 // WhatsApp da equipe para "esqueci minha senha" (só números, com DDI e DDD).
 const WHATSAPP_SUPORTE = String(import.meta.env.VITE_WHATSAPP_SUPORTE || '').replace(/\D/g, '');
@@ -46,6 +47,7 @@ function telaLogin() {
       ${criando ? '' : '<p style="text-align:center;margin:12px 0 0"><button type="button" class="linkbtn" data-act="esqueci">Esqueci minha senha</button></p>'}
     </form>
     <p class="tiny muted" style="margin-top:16px;text-align:center">${criando ? 'Use o mesmo e-mail que você informou na inscrição da jornada.' : 'Primeira vez aqui? Toque em "Criar conta".'}</p>
+    ${instalar.linkInstalarLogin()}
   </div>`);
 }
 
@@ -113,15 +115,22 @@ function senhaProvisoria() {
 // Fluxo principal
 // ---------------------------------------------------------------------------
 async function carregarDados() {
-  S.perfil = await api.meuPerfil();
+  // Em duas rodadas paralelas (em vez de uma consulta por vez): abre mais rápido no celular.
+  const [perfil, campanha] = await Promise.all([api.meuPerfil(), api.carregarCampanha(CAMPANHA_SLUG)]);
   // Sem usuária válida (sessão expirada ou revogada): volta para o login em vez de mostrar erro.
-  if (!S.perfil) { S.sessao = null; return false; }
-  S.campanha = await api.carregarCampanha(CAMPANHA_SLUG);
-  if (!S.campanha) throw new Error(`Campanha "${CAMPANHA_SLUG}" não encontrada. Rode o seed (docs/PRODUCAO.md).`);
-  S.dias = await api.carregarDias(S.campanha.id);
-  S.inscricao = await api.minhaInscricao(S.campanha.id, S.perfil.id);
-  S.consent = await api.meusConsentimentos(S.campanha.id, S.perfil.id);
-  await part.recarregarMinhaJornada();
+  if (!perfil) { S.sessao = null; return false; }
+  if (!campanha) throw new Error(`Campanha "${CAMPANHA_SLUG}" não encontrada. Rode o seed (docs/PRODUCAO.md).`);
+  S.perfil = perfil;
+  S.campanha = campanha;
+  const [dias, inscricao, consent] = await Promise.all([
+    api.carregarDias(campanha.id),
+    api.minhaInscricao(campanha.id, perfil.id),
+    api.meusConsentimentos(campanha.id, perfil.id),
+    part.recarregarMinhaJornada(),
+  ]);
+  S.dias = dias;
+  S.inscricao = inscricao;
+  S.consent = consent;
   S.eq = null;
   S.diaSim = null;
   if (ehEquipe()) {
@@ -206,6 +215,7 @@ const cliques = {
   recarregar: () => { S.perfil = null; render(); },
   ...part.cliques,
   ...eq.cliques,
+  ...instalar.cliques,
 };
 
 document.addEventListener('click', async (e) => {
@@ -319,4 +329,5 @@ async function iniciar() {
   render();
 }
 
+instalar.iniciarPWA();
 iniciar();

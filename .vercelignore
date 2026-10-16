@@ -1,0 +1,9 @@
+node_modules
+dist
+prototipo
+docs
+supabase
+scripts
+.env
+.env.*
+.github

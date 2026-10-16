@@ -26,3 +26,74 @@
 .ver-senha { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border: 0; background: none; color: var(--ink-2); cursor: pointer; display: grid; place-items: center; border-radius: 10px; }
 .ver-senha .i { width: 22px; height: 22px; }
 .senha-prov { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 18px; letter-spacing: 1px; user-select: all; }
+
+/* ---------- Celular: Android e iOS ---------- */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { overflow-x: hidden; }
+a, button, label, select, input, textarea, [data-act] { touch-action: manipulation; }
+img, svg { max-width: 100%; }
+/* iOS dá zoom automático em campos com fonte menor que 16px */
+@media (max-width: 760px) {
+  input, select, textarea, .input { font-size: 16px; }
+}
+/* Alvos de toque confortáveis */
+.btn.sm { min-height: 40px; }
+.choice { min-height: 40px; }
+.tabbar a { min-height: 54px; }
+/* Telas muito estreitas (320 a 360 px) */
+@media (max-width: 380px) {
+  .p-body { padding-left: 12px; padding-right: 12px; }
+  .p-head h1 { font-size: 30px; }
+  .day-hero { padding: 14px; gap: 12px; }
+  .ring { width: 64px; height: 64px; }
+  .tabbar { left: 8px; right: 8px; padding: 4px; }
+  .tabbar a { font-size: 9.5px; }
+  .grid21 { gap: 4px; }
+  .cols-3 { grid-template-columns: 1fr; }
+}
+
+/* Instalar o app */
+.install-banner { display: flex; align-items: center; gap: 10px; background: var(--surface); border-radius: 18px; padding: 10px 10px 10px 12px; margin-bottom: 14px; box-shadow: 0 1px 0 var(--sep); }
+.install-ic { width: 40px; height: 40px; border-radius: 10px; flex: none; display: grid; place-items: center; color: #fff; background: linear-gradient(140deg, #3aa874, #1f6b6b); }
+.install-ic .i { width: 22px; height: 22px; }
+.install-t { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 14px; line-height: 1.25; }
+.install-t span { color: var(--ink-2); font-size: 13px; }
+.install-x { border: 0; background: none; color: var(--ink-3); font-size: 26px; line-height: 1; width: 32px; height: 40px; cursor: pointer; flex: none; }
+.modal-bg.install { place-items: end center; padding: 0; }
+.modal-bg.install .modal { max-width: 520px; border-radius: 28px 28px 0 0; padding: 26px 20px calc(20px + env(safe-area-inset-bottom)); max-height: 88dvh; }
+.modal-bg.install .steps li { font-size: 16px; padding-bottom: 14px; }
+.modal-bg.install .steps li .i { width: 1.2em; height: 1.2em; vertical-align: -.25em; color: var(--tint); }
+.update-bar {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 90; bottom: calc(96px + env(safe-area-inset-bottom));
+  width: min(440px, calc(100% - 24px)); display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 10px 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600;
+}
+
+/* Área da equipe em tela estreita: menu horizontal que rola */
+@media (max-width: 860px) {
+  .app-real .side {
+    position: sticky; top: 0; z-index: 30; height: auto; flex-direction: row; flex-wrap: nowrap; align-items: center;
+    overflow-x: auto; gap: 4px; padding: 8px 10px; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .app-real .side::-webkit-scrollbar { display: none; }
+  .app-real .side a { flex: none; white-space: nowrap; margin: 0; padding: 9px 12px; }
+  .app-real .side .field { flex: none; margin: 0 0 0 6px; }
+  .app-real .side .field > span, .app-real .side p { display: none; }
+  .app-real .side .field select { min-width: 150px; }
+  .app-real .main { padding: 16px 12px 40px; }
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .tbl-wrap { -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 420px) {
+  .kpi .v { font-size: 26px; }
+  .review img { max-width: 100%; }
+  .rev-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+}
+
+/* Colunas de grade que encolhem (evita estouro com e-mails e textos longos) */
+.two-col { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 860px) {
+  .two-col, .cols-3, .review { grid-template-columns: minmax(0, 1fr); }
+}
+.card, .notice, .cx-txt, .cx-resp, .task-card .t, td { overflow-wrap: anywhere; }

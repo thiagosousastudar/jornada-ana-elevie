@@ -9,6 +9,7 @@ import { ic } from '../lib/icones.js';
 import { fmtLongo, fmtCurto } from '../lib/datas.js';
 import { reduzirFoto, enviarFoto, precarregarFotos, urlFoto, blobParaDataUrl } from '../lib/fotos.js';
 import { lerPrivado, salvarPrivado, apagarPrivado } from '../lib/privado.js';
+import { bannerInstalar, cartaoInstalar } from './instalar.js';
 
 const MOTIVOS_NAO = ['Prefiro não dizer', 'Falta de tempo', 'Não me senti bem', 'Imprevisto'];
 const MOTIVOS_IG = ['Meu perfil é fechado', 'Prefiro não me expor', 'Não deu tempo', 'Prefiro não dizer'];
@@ -154,6 +155,7 @@ export function telaDia(pedido) {
   return shell(`<div class="p-head"><div class="eyebrow">Olá, ${esc(chamado(S.perfil))} · ${fmtLongo(c, n)}</div><h1>${hoje > 21 && ehHoje ? 'Jornada concluída' : ehHoje ? 'Hoje' : 'Dia ' + n}</h1></div>
     <div class="p-body">
       ${bannerSimulado()}
+      ${bannerInstalar()}
       ${ajustes.length ? `<a href="#/tarefa/${ajustes[0].tarefa.codigo}" style="text-decoration:none"><div class="notice bad"><strong>${ajustes.length === 1 ? '1 tarefa precisa de ajuste' : ajustes.length + ' tarefas precisam de ajuste'}</strong>Dia ${ajustes[0].dia.numero} · ${esc(ajustes[0].tarefa.titulo)}. Toque para ver o que corrigir.</div></a>` : ''}
       <div class="day-hero">${anel(feitosDia, dia.tarefas.length)}<div class="hero-txt">
         <div class="k">Dia ${n} de 21 · ${esc(semanaNome(dia.semana))}</div><h2>${esc(dia.tema)}</h2>
@@ -494,6 +496,7 @@ export function telaAvisos() {
   };
   return shell(`<div class="p-head"><h1>Avisos</h1></div><div class="p-body">
     <a class="task-card perfil-row" href="#/perfil"><span class="avatar">${esc((p.nome || '?').trim()[0] || '?')}</span><div class="t"><h3 style="margin:0">${esc(p.nome)}</h3><div class="reg">${esc(p.email)}</div></div><div class="trail">${ic('chevron', 'chev')}</div></a>
+    ${cartaoInstalar()}
     ${ehEquipe() ? `<a class="task-card perfil-row" href="#/a"><div class="ico caixinha">${ic('grid')}</div><div class="t"><h3 style="margin:0">Área da equipe</h3><div class="reg">Seu papel: ${esc(NOME_PAPEL[p.papel])}</div></div><div class="trail">${ic('chevron', 'chev')}</div></a>` : ''}
     <div class="card"><div class="tiny muted">Foco da semana</div><h3 style="margin:4px 0">${esc(semanaNome(dia.semana))}</h3><p style="margin:0">${esc(((c.semanas || [])[dia.semana - 1] || {}).foco || '')}</p></div>
     <div class="card"><h3>Conteúdos da Dra. Nelly</h3>${conteudos.length ? conteudos.map((d) => `<a href="#/dia/${d.numero}" style="display:block;text-decoration:none;color:inherit;padding:8px 0;border-bottom:1px solid var(--sep)"><div class="tiny muted">Dia ${d.numero} · ${esc(d.nelly.formato)}</div><strong>${esc(d.nelly.titulo)}</strong></a>`).join('') : '<p class="small muted" style="margin:0">O primeiro conteúdo chega no dia 2.</p>'}</div>

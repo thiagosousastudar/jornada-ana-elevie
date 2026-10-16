@@ -10,9 +10,11 @@ function ok({ data, error }) {
 // Perfil e campanha
 // ---------------------------------------------------------------------------
 export async function meuPerfil() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  return ok(await supabase.from('perfis').select('*').eq('id', user.id).maybeSingle());
+  // A sessão local já traz o usuário (e renova o token se preciso): evita uma ida à rede.
+  // A segurança não depende disso: o banco confere o token em cada consulta (RLS).
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return null;
+  return ok(await supabase.from('perfis').select('*').eq('id', session.user.id).maybeSingle());
 }
 
 export async function salvarPerfil(id, { nome, apelido }) {

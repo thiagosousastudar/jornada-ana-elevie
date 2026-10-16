@@ -16,7 +16,8 @@
     "db:link": "supabase link",
     "db:push": "supabase db push",
     "db:seed": "supabase db push --include-seed",
-    "test:db": "node scripts/testar-banco.mjs"
+    "test:db": "node scripts/testar-banco.mjs",
+    "preview:prod": "npm run build && node scripts/servir-dist.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0"
