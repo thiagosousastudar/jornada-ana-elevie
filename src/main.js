@@ -1,14 +1,17 @@
 // Jornada Ana + Eleviê — app de produção (Vite + Supabase).
-// Etapa 1 (fundação): login com Google ou código no e-mail, perfil, entrada na jornada
+// Etapa 1 (fundação): login com e-mail e senha, perfil, entrada na jornada
 // (inscrição + consentimentos) e a tela "Hoje" lendo do banco. As demais telas do
 // protótipo (envio de tarefas, check-in, caixinha, equipe) são portadas na etapa 2.
 import './styles.css';
 import './app.css';
 import { configurado, CAMPANHA_SLUG } from './lib/supabase.js';
-import { entrarComGoogle, enviarCodigo, confirmarCodigo, sair, sessaoAtual, aoMudarSessao } from './lib/auth.js';
+import { entrar, criarConta, trocarSenha, sair, sessaoAtual, aoMudarSessao, traduzirErro, SENHA_MINIMA } from './lib/auth.js';
 import * as api from './lib/api.js';
 import { diaAtual, fmtLongo, fmtCurto } from './lib/datas.js';
-import { ic, GOOGLE_G } from './lib/icones.js';
+import { ic } from './lib/icones.js';
+
+// WhatsApp da equipe para "esqueci minha senha" (só números, com DDI e DDD).
+const WHATSAPP_SUPORTE = String(import.meta.env.VITE_WHATSAPP_SUPORTE || '').replace(/\D/g, '');
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -69,48 +72,62 @@ function telaConfigurar() {
     <div class="notice info"><strong>Passo a passo</strong>Veja <strong>docs/PRODUCAO.md</strong>.</div></div>`);
 }
 
+function campoSenha(nome, rotulo, auto, dica) {
+  return `<label class="field"><span>${rotulo}</span>
+    <div class="senha-wrap"><input class="input" name="${nome}" type="password" autocomplete="${auto}" minlength="${SENHA_MINIMA}"><button type="button" class="ver-senha" data-act="ver-senha" aria-label="Mostrar senha">${ic('eye')}</button></div>
+    ${dica ? `<div class="tiny muted" style="margin:6px 4px 0">${dica}</div>` : ''}<div data-errfor="${nome}"></div></label>`;
+}
+
 function telaLogin() {
-  const passo = S.ui.passo || 'inicio';
-  if (passo === 'inicio') {
-    return shell(`<div class="p-body login">
-      <div class="welcome-hero"><div class="logo">${ic('leaf')}</div><h1>Jornada Ana + Eleviê</h1><p class="muted">21 dias de hábitos, no seu ritmo.</p></div>
-      <div class="login-btns">
-        <button class="btn-google" data-act="google">${GOOGLE_G}<span>Continuar com o Google</span></button>
-        <div class="ou"><span>ou</span></div>
-        <button class="btn ghost block" data-act="login-email">${ic('tray')} Entrar com código no e-mail</button>
-      </div>
-      <p class="tiny muted" style="margin-top:18px;text-align:center">Sem senha. Do Google usamos só o seu nome e o seu e-mail.</p>
-    </div>`);
-  }
-  const corpo = passo === 'email'
-    ? `<form data-form="email" novalidate>
-        <label class="field"><span>Seu e-mail</span><input class="input" name="email" type="email" autocomplete="email" placeholder="voce@email.com" value="${esc(S.ui.email || '')}"><div data-errfor="email"></div></label>
-        <button class="btn block" type="submit">Receber código de acesso</button>
-      </form>`
-    : `<form data-form="codigo" novalidate>
-        <p>Enviamos um código para <strong>${esc(S.ui.email)}</strong>. Confira também o spam.</p>
-        <label class="field"><span>Código de 6 dígitos</span><input class="input" name="codigo" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000"><div data-errfor="codigo"></div></label>
-        <button class="btn block" type="submit">Entrar</button>
-        <p style="text-align:center;margin-top:12px"><button type="button" class="linkbtn" data-act="login-email">Usar outro e-mail</button></p>
-      </form>`;
-  return shell(`<div class="p-body login"><a class="back" href="#" data-act="login-inicio">Entrar</a>
-    <div class="welcome-hero" style="padding-top:6px"><div class="logo">${ic('tray')}</div><h1>Código no e-mail</h1></div>
-    <div class="card">${corpo}</div></div>`);
+  const aba = S.ui.aba || 'entrar';
+  const criando = aba === 'criar';
+  return shell(`<div class="p-body login">
+    <div class="welcome-hero"><div class="logo">${ic('leaf')}</div><h1>Jornada Ana + Eleviê</h1><p class="muted">21 dias de hábitos, no seu ritmo.</p></div>
+    <div class="seg-light seg-full" role="tablist">
+      <button type="button" role="tab" data-act="aba" data-v="entrar" class="${criando ? '' : 'on'}" aria-selected="${!criando}">Entrar</button>
+      <button type="button" role="tab" data-act="aba" data-v="criar" class="${criando ? 'on' : ''}" aria-selected="${criando}">Criar conta</button>
+    </div>
+    <form data-form="login" data-aba="${aba}" class="card" novalidate>
+      <label class="field"><span>E-mail</span><input class="input" name="email" type="email" inputmode="email" autocomplete="email" placeholder="voce@email.com" value="${esc(S.ui.email || '')}"><div data-errfor="email"></div></label>
+      ${campoSenha('senha', criando ? 'Crie uma senha' : 'Senha', criando ? 'new-password' : 'current-password', criando ? `Pelo menos ${SENHA_MINIMA} caracteres. Anote num lugar seguro.` : '')}
+      <div data-errfor="geral"></div>
+      <button class="btn block" type="submit">${criando ? 'Criar minha conta' : 'Entrar'}</button>
+      ${criando ? '' : '<p style="text-align:center;margin:12px 0 0"><button type="button" class="linkbtn" data-act="esqueci">Esqueci minha senha</button></p>'}
+    </form>
+    <p class="tiny muted" style="margin-top:16px;text-align:center">${criando ? 'Use o mesmo e-mail que você informou na inscrição da jornada.' : 'Primeira vez aqui? Toque em "Criar conta".'}</p>
+  </div>`);
+}
+
+// Depois que a equipe redefine a senha, a participante cria uma nova no primeiro acesso.
+function telaNovaSenha() {
+  return shell(`<div class="p-body login">
+    <div class="welcome-hero"><div class="logo">${ic('lock')}</div><h1>Crie uma nova senha</h1>
+      <p class="muted">Você entrou com uma senha provisória da equipe. Escolha uma nova, só sua.</p></div>
+    <form data-form="nova-senha" class="card" novalidate>
+      ${campoSenha('nova', 'Nova senha', 'new-password', `Pelo menos ${SENHA_MINIMA} caracteres.`)}
+      ${campoSenha('confirma', 'Repita a nova senha', 'new-password', '')}
+      <button class="btn block" type="submit">Salvar nova senha</button>
+    </form></div>`);
 }
 
 function telaPerfil(editando) {
   const p = S.perfil;
-  const viaGoogle = p.metodo_login === 'google';
   return shell(`<div class="p-body login">
     ${editando ? '<a class="back" href="#/avisos">Avisos</a>' : ''}
     <div class="welcome-hero"><div class="logo">${ic('person')}</div><h1>${editando ? 'Meu perfil' : 'Como podemos te chamar?'}</h1>
-      <p class="muted">${editando ? 'Seu nome aparece para a Ana e a equipe.' : viaGoogle ? 'Trouxemos o nome da sua conta Google. Confira e ajuste se quiser.' : 'Conte o seu nome para a Ana e a equipe te reconhecerem.'}</p></div>
+      <p class="muted">${editando ? 'Seu nome aparece para a Ana e a equipe.' : 'Conte o seu nome para a Ana e a equipe te reconhecerem.'}</p></div>
     <form data-form="perfil" data-editando="${editando ? 1 : 0}" class="card" novalidate>
       <label class="field"><span>Nome completo</span><input class="input" name="nome" autocomplete="name" value="${esc(p.nome)}" placeholder="Seu nome e sobrenome"><div data-errfor="nome"></div></label>
       <label class="field"><span>Como prefere ser chamada? <em>(opcional)</em></span><input class="input" name="apelido" maxlength="40" value="${esc(p.apelido)}"></label>
-      <div class="perfil-conta">${viaGoogle ? GOOGLE_G : ic('tray')}<div><div class="tiny muted">${viaGoogle ? 'Conectada com o Google' : 'Acesso por código no e-mail'}</div><strong>${esc(p.email)}</strong></div></div>
+      <div class="perfil-conta">${ic('tray')}<div><div class="tiny muted">Entra com e-mail e senha</div><strong>${esc(p.email)}</strong></div></div>
       <button class="btn block" type="submit" style="margin-top:16px">${editando ? 'Salvar' : 'Continuar'}</button>
-    </form></div>`, editando ? 'avisos' : null);
+    </form>
+    ${editando ? `<form data-form="nova-senha" data-editando="1" class="card" novalidate>
+      <h3>Trocar senha</h3>
+      ${campoSenha('nova', 'Nova senha', 'new-password', `Pelo menos ${SENHA_MINIMA} caracteres.`)}
+      ${campoSenha('confirma', 'Repita a nova senha', 'new-password', '')}
+      <button class="btn ghost block" type="submit">Trocar senha</button>
+    </form>` : ''}</div>`, editando ? 'avisos' : null);
 }
 
 const chamado = (p) => (p.apelido || p.nome || '').trim().split(/\s+/)[0];
@@ -186,7 +203,7 @@ function telaTarefa(codigo) {
 function telaAvisos() {
   const p = S.perfil;
   return shell(`<div class="p-head"><h1>Avisos</h1></div><div class="p-body">
-    <a class="task-card perfil-row" href="#/perfil"><span class="avatar">${esc((p.nome || '?').trim()[0] || '?')}</span><div class="t"><h3 style="margin:0">${esc(p.nome)}</h3><div class="reg">${p.metodo_login === 'google' ? 'Google · ' : ''}${esc(p.email)}</div></div><div class="trail">${ic('chevron', 'chev')}</div></a>
+    <a class="task-card perfil-row" href="#/perfil"><span class="avatar">${esc((p.nome || '?').trim()[0] || '?')}</span><div class="t"><h3 style="margin:0">${esc(p.nome)}</h3><div class="reg">${esc(p.email)}</div></div><div class="trail">${ic('chevron', 'chev')}</div></a>
     <div class="card"><h3>Aviso de saúde</h3><p class="small" style="margin:0">${esc(S.campanha.aviso_saude)}</p></div>
     <div class="card"><h3>Precisa de ajuda?</h3><p class="small" style="margin:0">Dúvidas sobre o app: fale com a equipe pelo WhatsApp da jornada. Dúvidas sobre a sua saúde vão para a Dra. Nelly ou para a consulta.</p></div>
     <p style="text-align:center"><button class="linkbtn" data-act="sair">Sair</button></p></div>`, 'avisos');
@@ -196,7 +213,24 @@ function telaEquipe() {
   return `<div class="admin"><aside class="side"><div class="brand"><span class="brand-ic">${ic('leaf')}</span><span>Jornada Ana + Eleviê<small>${esc(S.campanha ? S.campanha.nome : '')}</small></span></div>
       <a href="#/a" class="on"><span class="side-l">${ic('grid')}Painel</span></a><hr><a href="#/hoje"><span class="side-l">${ic('house')}Ver como participante</span></a></aside>
     <main class="main enter"><div class="main-head"><div><h1>Olá, ${esc(chamado(S.perfil))}</h1><p class="muted">Papel: ${esc(S.perfil.papel)}</p></div></div>
-      <div class="notice info"><strong>Área da equipe</strong>Painel, revisão de evidências, caixinha e configuração dos dias chegam na etapa 2 (portados do protótipo).</div></main></div>`;
+      <div class="notice info"><strong>Área da equipe</strong>Painel, revisão de evidências, caixinha e configuração dos dias chegam na etapa 3 (portados do protótipo).</div>
+      <div class="card" style="max-width:560px">
+        <h2>Redefinir senha</h2>
+        <p class="small muted">Quando uma participante avisar no WhatsApp que esqueceu a senha: digite o e-mail dela, gere uma senha provisória e mande para ela. No próximo acesso o app pede uma senha nova.</p>
+        <form data-form="redefinir" novalidate>
+          <label class="field"><span>E-mail da participante</span><input class="input" name="email" type="email" autocomplete="off" placeholder="participante@email.com"><div data-errfor="email"></div></label>
+          <button class="btn" type="submit">Gerar senha provisória</button>
+        </form>
+        ${S.ui.provisoria ? `<div class="notice ok" style="margin:16px 0 0"><strong>Senha redefinida</strong>
+          E-mail: ${esc(S.ui.provisoria.email)}<br>Senha provisória: <b class="senha-prov">${esc(S.ui.provisoria.senha)}</b>
+          <div class="btn-row" style="margin-top:10px"><button class="btn sm" data-act="copiar-provisoria">${ic('copy')} Copiar mensagem para o WhatsApp</button></div></div>` : ''}
+      </div></main></div>`;
+}
+
+function senhaProvisoria() {
+  const letras = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const n = crypto.getRandomValues(new Uint32Array(8));
+  return Array.from(n, (x) => letras[x % letras.length]).join('');
 }
 
 // ---------------------------------------------------------------------------
@@ -222,6 +256,7 @@ async function render() {
   }
   const [rota, arg] = location.hash.replace(/^#\/?/, '').split('/');
   const equipe = ['equipe', 'nelly', 'admin'].includes(S.perfil.papel);
+  if (S.perfil.trocar_senha) { app.innerHTML = telaNovaSenha(); return; }
   if (!S.perfil.nome) { app.innerHTML = telaPerfil(false); return; }
   if (rota === 'a' && equipe) { app.innerHTML = telaEquipe(); return; }
   if (!S.inscricao || !(S.consent.termos && S.consent.termos.aceito)) { app.innerHTML = telaBoasVindas(); return; }
@@ -237,16 +272,31 @@ document.addEventListener('click', async (e) => {
   e.preventDefault();
   const act = el.dataset.act;
   try {
-    if (act === 'google') {
-      el.disabled = true;
-      const { error } = await entrarComGoogle();
-      if (error) throw error;
+    if (act === 'aba') {
+      const email = document.querySelector('[data-form=login] [name=email]');
+      S.ui = { aba: el.dataset.v, email: email ? email.value.trim() : S.ui.email };
+      render();
+    } else if (act === 'ver-senha') {
+      const input = el.parentElement.querySelector('input');
+      const mostrar = input.type === 'password';
+      input.type = mostrar ? 'text' : 'password';
+      el.setAttribute('aria-label', mostrar ? 'Esconder senha' : 'Mostrar senha');
+      el.innerHTML = ic(mostrar ? 'eyeoff' : 'eye');
+    } else if (act === 'esqueci') {
+      const campo = document.querySelector('[data-form=login] [name=email]');
+      const email = campo ? campo.value.trim() : '';
+      if (!WHATSAPP_SUPORTE) { toast('Fale com a equipe pelo grupo da jornada no WhatsApp.'); return; }
+      const msg = `Olá! Esqueci minha senha do app da Jornada Ana + Eleviê. ${email ? 'Meu e-mail de cadastro é: ' + email : 'Pode me ajudar?'}`;
+      window.open(`https://wa.me/${WHATSAPP_SUPORTE}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+    } else if (act === 'copiar-provisoria') {
+      const p = S.ui.provisoria;
+      const msg = `Olá! Sua senha provisória do app da Jornada Ana + Eleviê é: ${p.senha}\nEntre com o seu e-mail (${p.email}) e essa senha. O app vai pedir para você criar uma senha nova.`;
+      await navigator.clipboard.writeText(msg);
+      toast('Mensagem copiada. Cole na conversa do WhatsApp.');
     }
-    else if (act === 'login-email') { S.ui = { passo: 'email', email: S.ui.email }; render(); }
-    else if (act === 'login-inicio') { S.ui = {}; render(); }
     else if (act === 'sair') { await sair(); }
     else if (act === 'recarregar') { S.perfil = null; render(); }
-  } catch (err) { el.disabled = false; toast(err.message || 'Não foi possível concluir.'); }
+  } catch (err) { el.disabled = false; toast(traduzirErro(err)); }
 });
 
 document.addEventListener('submit', async (e) => {
@@ -258,18 +308,37 @@ document.addEventListener('submit', async (e) => {
   const botao = form.querySelector('[type=submit]');
   if (botao) botao.disabled = true;
   try {
-    if (tipo === 'email') {
+    if (tipo === 'login') {
+      const criando = form.dataset.aba === 'criar';
       const email = String(fd.get('email') || '').trim().toLowerCase();
-      if (!/^\S+@\S+\.\S+$/.test(email)) { erros(form, [['email', 'Digite um e-mail válido.']]); return; }
-      const { error } = await enviarCodigo(email);
-      if (error) throw error;
-      S.ui = { passo: 'codigo', email };
+      const senha = String(fd.get('senha') || '');
+      const lista = [];
+      if (!/^\S+@\S+\.\S+$/.test(email)) lista.push(['email', 'Digite um e-mail válido.']);
+      if (senha.length < SENHA_MINIMA) lista.push(['senha', criando ? `A senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.` : 'Digite a sua senha.']);
+      if (lista.length) { erros(form, lista); return; }
+      S.ui.email = email;
+      const { data, error } = criando ? await criarConta(email, senha) : await entrar(email, senha);
+      if (error) { erros(form, [['geral', traduzirErro(error)]]); return; }
+      // Se o projeto exigir confirmação de e-mail, a conta é criada sem sessão.
+      if (criando && !data.session) { erros(form, [['geral', 'Conta criada! Confirme pelo link que enviamos ao seu e-mail e depois entre.']]); return; }
+    } else if (tipo === 'nova-senha') {
+      const nova = String(fd.get('nova') || '');
+      const confirma = String(fd.get('confirma') || '');
+      if (nova.length < SENHA_MINIMA) { erros(form, [['nova', `A senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.`]]); return; }
+      if (nova !== confirma) { erros(form, [['confirma', 'As duas senhas não estão iguais.']]); return; }
+      const { error } = await trocarSenha(nova);
+      if (error) { erros(form, [['nova', traduzirErro(error)]]); return; }
+      if (S.perfil.trocar_senha) S.perfil = await api.limparTrocarSenha(S.perfil.id);
+      form.reset();
+      toast('Senha salva.');
       render();
-    } else if (tipo === 'codigo') {
-      const codigo = String(fd.get('codigo') || '').trim();
-      if (!/^\d{6}$/.test(codigo)) { erros(form, [['codigo', 'O código tem 6 números.']]); return; }
-      const { error } = await confirmarCodigo(S.ui.email, codigo);
-      if (error) { erros(form, [['codigo', 'Código inválido ou expirado. Peça um novo.']]); return; }
+    } else if (tipo === 'redefinir') {
+      const email = String(fd.get('email') || '').trim().toLowerCase();
+      if (!/^\S+@\S+\.\S+$/.test(email)) { erros(form, [['email', 'Digite o e-mail da participante.']]); return; }
+      const senha = senhaProvisoria();
+      try { await api.redefinirSenha(email, senha); } catch (err) { erros(form, [['email', traduzirErro(err)]]); return; }
+      S.ui.provisoria = { email, senha };
+      render();
     } else if (tipo === 'perfil') {
       const nome = String(fd.get('nome') || '').trim().replace(/\s+/g, ' ');
       if (nome.length < 2) { erros(form, [['nome', 'Digite o seu nome.']]); return; }
@@ -288,7 +357,7 @@ document.addEventListener('submit', async (e) => {
       render();
     }
   } catch (err) {
-    toast(err.message || 'Não foi possível concluir.');
+    toast(traduzirErro(err));
   } finally {
     if (botao) botao.disabled = false;
   }
@@ -306,8 +375,6 @@ async function iniciar() {
     S.sessao = sessao;
     if (mudou) { S.perfil = null; S.ui = {}; render(); }
   });
-  // Limpa o ?code= do retorno do Google depois que a sessão foi criada.
-  if (location.search.includes('code=')) history.replaceState(null, '', location.pathname + (location.hash || '#/hoje'));
   render();
 }
 

@@ -1,40 +1,32 @@
+// Login por e-mail e senha. Esqueceu a senha? A participante fala com a equipe pelo WhatsApp
+// e a equipe gera uma senha provisória pelo app (função redefinir_senha no banco).
 import { supabase } from './supabase.js';
 
-// Pergunta ao Supabase se o login com Google está ativo antes de sair do app:
-// se não estiver, o redirecionamento cairia numa página de erro do Supabase.
-async function googleAtivo() {
-  try {
-    const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/settings`, {
-      headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
-    });
-    const cfg = await r.json();
-    return Boolean(cfg.external && cfg.external.google);
-  } catch {
-    return true; // na dúvida, tenta: o Supabase responde se não estiver ativo
-  }
+export const SENHA_MINIMA = 6;
+
+// Mensagens do Supabase traduzidas para algo que a participante entenda.
+export function traduzirErro(erro) {
+  const m = (erro && erro.message) || '';
+  if (/invalid login credentials/i.test(m)) return 'E-mail ou senha incorretos.';
+  if (/already registered|already been registered/i.test(m)) return 'Este e-mail já tem conta. Use a aba "Entrar".';
+  if (/password should be at least/i.test(m)) return `A senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.`;
+  if (/email not confirmed/i.test(m)) return 'Seu e-mail ainda não foi confirmado. Fale com a equipe pelo WhatsApp.';
+  if (/rate limit|too many/i.test(m)) return 'Muitas tentativas seguidas. Espere um minuto e tente de novo.';
+  if (/failed to fetch|network/i.test(m)) return 'Sem conexão. Confira a internet e tente de novo.';
+  if (/new password should be different/i.test(m)) return 'A nova senha precisa ser diferente da atual.';
+  return m || 'Não foi possível concluir.';
 }
 
-// Do Google pedimos só o básico: nome, e-mail e foto (escopos padrão openid, email, profile).
-export async function entrarComGoogle() {
-  if (!(await googleAtivo())) {
-    return { error: new Error('O login com Google ainda não está disponível. Use o código no e-mail.') };
-  }
-  return supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: window.location.origin + window.location.pathname,
-      queryParams: { prompt: 'select_account' },
-    },
-  });
+export function entrar(email, senha) {
+  return supabase.auth.signInWithPassword({ email, password: senha });
 }
 
-// Código de 6 dígitos no e-mail (o template do e-mail precisa mostrar {{ .Token }}; ver docs/PRODUCAO.md).
-export function enviarCodigo(email) {
-  return supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+export function criarConta(email, senha) {
+  return supabase.auth.signUp({ email, password: senha });
 }
 
-export function confirmarCodigo(email, token) {
-  return supabase.auth.verifyOtp({ email, token, type: 'email' });
+export function trocarSenha(nova) {
+  return supabase.auth.updateUser({ password: nova });
 }
 
 export function sair() {

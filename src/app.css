@@ -17,3 +17,12 @@
 @media (min-width: 760px) {
   .app-real .phone { box-shadow: 0 0 0 1px var(--sep); }
 }
+
+/* Login com e-mail e senha */
+.seg-full { display: grid; grid-template-columns: 1fr 1fr; width: 100%; margin: 4px 0 14px; padding: 3px; border-radius: 12px; }
+.seg-full button { padding: 9px 0; font-size: 15px; border-radius: 9px; }
+.senha-wrap { position: relative; }
+.senha-wrap .input { padding-right: 52px; }
+.ver-senha { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border: 0; background: none; color: var(--ink-2); cursor: pointer; display: grid; place-items: center; border-radius: 10px; }
+.ver-senha .i { width: 22px; height: 22px; }
+.senha-prov { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 18px; letter-spacing: 1px; user-select: all; }

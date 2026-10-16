@@ -13,7 +13,11 @@ const check = (cond, msg) => { if (cond) { ok++; console.log('  ✓ ' + msg); } 
 await db.exec(`
   create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
   create schema auth;
-  create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}', raw_app_meta_data jsonb default '{}');
+  create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}', raw_app_meta_data jsonb default '{}', encrypted_password text, updated_at timestamptz);
+  -- No Supabase, crypt/gen_salt vêm do pgcrypto (schema extensions); aqui, um equivalente simples.
+  create schema extensions;
+  create function extensions.gen_salt(text) returns text language sql as $$ select 'sal' $$;
+  create function extensions.crypt(text, text) returns text language sql as $$ select md5($1 || $2) $$;
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   create schema storage;
   create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
@@ -131,6 +135,19 @@ r = await tenta(U.camila, `insert into storage.objects (bucket_id, name) values 
 r = await tenta(U.camila, `insert into storage.objects (bucket_id, name) values ('evidencias', '${U.bia}/x.jpg')`); check(!r.ok, 'não envia foto na pasta de outra');
 r = await tenta(U.bia, `select count(*) n from storage.objects`); check(Number(r.rows[0].n) === 0, 'outra participante não vê a foto');
 r = await tenta(U.equipe, `select count(*) n from storage.objects`); check(Number(r.rows[0].n) === 1, 'equipe vê a foto para revisar');
+
+console.log('Senha (login por e-mail e senha):');
+const ADMIN = '55555555-5555-5555-5555-555555555555';
+await db.exec(`insert into auth.users (id, email) values ('${ADMIN}', 'admin@elevie.com'); update public.perfis set papel = 'admin' where id = '${ADMIN}';`);
+r = await tenta(U.camila, "select public.redefinir_senha('bia@hotmail.com', 'nova123')"); check(!r.ok && /equipe/.test(r.erro), 'participante não redefine senha de ninguém');
+r = await tenta(U.equipe, "select public.redefinir_senha('bia@hotmail.com', '123')"); check(!r.ok && /6 caracteres/.test(r.erro), 'senha provisória precisa de 6 caracteres ou mais');
+r = await tenta(U.equipe, "select public.redefinir_senha('ninguem@x.com', 'nova123')"); check(!r.ok && /Nenhuma conta/.test(r.erro), 'avisa quando o e-mail não existe');
+r = await tenta(U.equipe, "select public.redefinir_senha('BIA@hotmail.com', 'nova123')"); check(r.ok, 'equipe redefine a senha de participante (sem diferenciar maiúsculas no e-mail)');
+check(await cnt(`select count(*) n from auth.users where id = '${U.bia}' and encrypted_password is not null`) === 1, 'senha gravada criptografada');
+r = await tenta(U.bia, `select trocar_senha from public.perfis where id = '${U.bia}'`); check(r.rows[0].trocar_senha === true, 'participante é avisada para criar nova senha');
+r = await tenta(U.bia, `update public.perfis set trocar_senha = false where id = '${U.bia}'`); check(r.ok, 'participante limpa o aviso depois de trocar');
+r = await tenta(U.equipe, "select public.redefinir_senha('nelly@elevie.com', 'nova123')"); check(!r.ok && /admin/.test(r.erro), 'equipe não redefine a senha da Dra. Nelly');
+r = await tenta(ADMIN, "select public.redefinir_senha('nelly@elevie.com', 'nova123')"); check(r.ok, 'admin redefine a senha de alguém da equipe');
 
 console.log(`\n${ok} ok, ${falhas} falha(s)`);
 process.exit(falhas ? 1 : 0);

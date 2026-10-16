@@ -63,3 +63,13 @@ export async function meusRegistros(perfilId) {
 export async function meusCheckins(campanhaId, perfilId) {
   return ok(await supabase.from('checkins').select('*').eq('campanha_id', campanhaId).eq('perfil_id', perfilId));
 }
+
+// Depois de criar a senha nova, some o aviso de "senha provisória".
+export async function limparTrocarSenha(id) {
+  return ok(await supabase.from('perfis').update({ trocar_senha: false }).eq('id', id).select().single());
+}
+
+// Equipe gera uma senha provisória para quem esqueceu (regras na função redefinir_senha do banco).
+export async function redefinirSenha(email, senha) {
+  return ok(await supabase.rpc('redefinir_senha', { p_email: email, p_senha: senha }));
+}

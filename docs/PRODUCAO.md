@@ -5,7 +5,7 @@ Participante / equipe (celular ou computador)
         │  https://jornada...  (Vercel, região São Paulo)
         ▼
   App (Vite, HTML/CSS/JS) ──────────────►  Supabase (São Paulo)
-        │                                   ├─ Auth: Google + código no e-mail
+        │                                   ├─ Auth: e-mail e senha
         │                                   ├─ Postgres com RLS (quem vê o quê)
         │                                   └─ Storage privado "evidencias" (fotos)
         ▼
@@ -47,37 +47,19 @@ npx supabase db push --include-seed
 ```
 O seed cria a campanha `edicao-1` com os 21 dias e 84 tarefas. Os 5 conteúdos da Dra. Nelly entram **em revisão**: ela aprova pelo app antes de aparecerem.
 
-### 2.3 Login por código no e-mail
-1. **Authentication › Providers › Email**: ativo, com "Confirm email" ligado.
-2. **Authentication › Email Templates**: nos modelos *Magic Link* e *Confirm signup*, inclua o código:
-   ```html
-   <h2>Seu código de acesso</h2>
-   <p>Use este código para entrar na Jornada Ana + Eleviê:</p>
-   <p style="font-size:28px;font-weight:700;letter-spacing:4px">{{ .Token }}</p>
-   <p>Ele vale por 1 hora. Se não foi você, ignore este e-mail.</p>
-   ```
-3. **SMTP próprio é obrigatório antes do lançamento** (**Project Settings › Authentication › SMTP**). O e-mail padrão do Supabase envia pouquíssimas mensagens por hora. Opções: Resend, Brevo ou Amazon SES, com remetente do domínio da clínica.
+### 2.3 Login por e-mail e senha
+1. **Authentication › Sign In / Providers › Email**: deixe ativo e **desligue "Confirm email"**. Assim a participante cria a conta e já entra, sem depender de e-mail.
+2. Senha mínima: 6 caracteres (padrão do Supabase, igual à regra do app).
+3. **Esqueceu a senha?** O botão abre o WhatsApp da equipe com o e-mail da participante. Cadastre o número em `VITE_WHATSAPP_SUPORTE`: só números, com DDI e DDD (ex.: `5514999999999`). No app, a equipe entra com o próprio login, informa o e-mail da participante e gera uma senha provisória; o app pede uma senha nova no próximo acesso.
+4. Como o app não envia e-mails, o SMTP próprio não é necessário.
 
-### 2.4 Login com o Google
-1. Em **console.cloud.google.com**, crie um projeto ("Jornada Ana Elevie").
-2. **APIs e serviços › Tela de consentimento OAuth**:
-   - tipo **Externo**;
-   - nome do app "Jornada Ana + Eleviê", e-mail de suporte e logo;
-   - domínios autorizados: `supabase.co` e o domínio do app;
-   - escopos: `openid`, `email` e `profile`, nada além disso.
-3. **Credenciais › Criar ID do cliente OAuth › Aplicativo da Web**:
-   - Origens JavaScript: `http://localhost:5173` e `https://SEU-DOMINIO`.
-   - URI de redirecionamento: `https://SEU_PROJECT_REF.supabase.co/auth/v1/callback`.
-4. No Supabase, em **Authentication › Providers › Google**, ative e cole o *Client ID* e o *Client Secret*.
-5. Antes do lançamento, **publique o app** na tela de consentimento (status "Em produção"). Enquanto estiver em "Teste", só os e-mails cadastrados como testadores conseguem entrar.
-
-### 2.5 Endereços permitidos
+### 2.4 Endereços permitidos
 Em **Authentication › URL Configuration**:
 - **Site URL**: `https://SEU-DOMINIO` (o endereço final do app).
-- **Redirect URLs**: `http://localhost:5173`, `https://SEU-DOMINIO` e `https://*-SEU-TIME.vercel.app` (prévias da Vercel).
+- **Redirect URLs**: `http://localhost:5173` e `https://SEU-DOMINIO`.
 
-### 2.6 Papéis: admin, equipe e Dra. Nelly
-Cada pessoa entra no app uma vez (vira "participante"). Depois, no **SQL Editor**:
+### 2.5 Papéis: admin, equipe e Dra. Nelly
+Cada pessoa cria a conta no app uma vez (vira "participante"). Depois, no **SQL Editor**:
 ```sql
 -- primeiro admin (só uma vez)
 update public.perfis set papel = 'admin' where email = 'seu-email@gmail.com';
@@ -95,8 +77,9 @@ select public.definir_papel('dra.nelly@email.com', 'nelly');
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
    - `VITE_CAMPANHA_SLUG` = `edicao-1`
+   - `VITE_WHATSAPP_SUPORTE` = número do WhatsApp da equipe (só números)
 3. **Deploy**. A região já vem configurada para São Paulo (`gru1`) no `vercel.json`, junto com os cabeçalhos de segurança.
-4. Domínio próprio (ex.: `jornada.elevie.com.br`): em **Settings › Domains**. Depois, atualize o endereço no Supabase (item 2.5) e no Google (item 2.4).
+4. Domínio próprio (ex.: `jornada.elevie.com.br`): em **Settings › Domains**. Depois, atualize o endereço no Supabase (item 2.4).
 
 ## 4. Rodar no computador
 
@@ -117,9 +100,8 @@ npm run prototipo            # protótipo clicável em http://localhost:3200
 ## 6. Antes do lançamento
 
 - [ ] Supabase no plano **Pro** (backups diários, sem pausa).
-- [ ] **SMTP próprio** configurado e testado.
-- [ ] App do Google **publicado** (fora do modo teste).
-- [ ] Domínio próprio na Vercel, com Supabase e Google atualizados.
+- [ ] "Confirm email" **desligado** e número de WhatsApp da equipe cadastrado.
+- [ ] Domínio próprio na Vercel, com o Supabase atualizado.
 - [ ] Data de início real: `update public.campanhas set inicio = 'AAAA-MM-DD' where slug = 'edicao-1';` (uma **segunda-feira**).
 - [ ] WhatsApp da clínica: `update public.campanhas set whatsapp_clinica = '55DDDNUMERO' where slug = 'edicao-1';`
 - [ ] @ correto da clínica no Instagram (o `@eleviê` do PDF tem acento e não existe no Instagram).
