@@ -748,8 +748,14 @@ export const envios = {
     S.privado[fase] = await lerPrivado(S.perfil.id, fase);
     if (fase === 'inicio') await marcarPartidaNoServidor();
     S.ui = {};
-    toast('Guardado só no seu celular.');
-    location.hash = fase === 'final' && S.privado.inicio ? '#/privado/comparar' : '#/privado';
+    // Ponto de partida feito: volta para a tela do dia, já com tudo liberado.
+    if (fase === 'inicio') {
+      toast('Ponto de partida guardado só no seu celular. Agora as tarefas estão liberadas!');
+      location.hash = '#/';
+    } else {
+      toast('Guardado só no seu celular.');
+      location.hash = S.privado.inicio ? '#/privado/comparar' : '#/privado';
+    }
     app.render();
   },
 };
