@@ -108,11 +108,11 @@ export function instrucoes() {
 // Peças de tela
 // ---------------------------------------------------------------------------
 export function bannerInstalar() {
-  const a = ambiente();
-  if (jaInstalado() || !a.celular || dispensado()) return '';
+  if (jaInstalado() || dispensado()) return '';
+  const celular = ambiente().celular;
   return `<div class="install-banner">
     <div class="install-ic">${ic('house')}</div>
-    <div class="install-t"><strong>Instale o app</strong><span>Abre direto da tela inicial.</span></div>
+    <div class="install-t"><strong>Instale o app</strong><span>${celular ? 'Abre direto da tela inicial.' : 'Melhor no celular: abra este endereço nele e instale.'}</span></div>
     <button class="btn sm" data-act="${eventoInstalacao ? 'instalar-agora' : 'instalacao-abrir'}">${eventoInstalacao ? 'Instalar' : 'Como fazer'}</button>
     <button class="install-x" data-act="dispensar-instalacao" aria-label="Agora não">×</button>
   </div>`;
@@ -132,6 +132,17 @@ export function cartaoInstalar() {
 
 export const linkInstalarLogin = () => (!jaInstalado() && ambiente().celular
   ? '<p style="text-align:center;margin:10px 0 0"><button class="linkbtn" data-act="instalacao-abrir">Instalar o app no celular</button></p>' : '');
+
+// Na primeira entrada no celular (sem o app instalado), a explicação abre sozinha, uma vez por aparelho.
+const CHAVE_VISTO = 'jornada-instalar-explicado';
+export function explicarNaPrimeiraVez() {
+  if (jaInstalado() || !ambiente().celular) return;
+  try {
+    if (localStorage.getItem(CHAVE_VISTO)) return;
+    localStorage.setItem(CHAVE_VISTO, String(Date.now()));
+  } catch { return; }
+  setTimeout(abrirFolha, 600);
+}
 
 function abrirFolha() {
   fecharFolha();

@@ -176,6 +176,7 @@ async function render() {
       case 'perfil': pintar(telaPerfil(true)); break;
       default: pintar(part.telaDia());
     }
+    if (minha === rodada) instalar.explicarNaPrimeiraVez();
   } catch (e) {
     pintar(falha(e.message));
   }

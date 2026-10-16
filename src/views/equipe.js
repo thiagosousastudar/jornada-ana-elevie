@@ -403,7 +403,7 @@ function campanha() {
     <form data-form="campanha" class="card" style="margin-bottom:16px" novalidate>
       <h3>Datas e contatos</h3>
       <div class="two-col">
-        <label class="field"><span>Início (dia 1, uma segunda-feira)</span><input class="input" type="date" name="inicio" value="${esc(c.inicio)}"></label>
+        <label class="field"><span>Início (dia 1)</span><input class="input" type="date" name="inicio" value="${esc(c.inicio)}"></label>
         <label class="field"><span>Libera às</span><input class="input" type="time" name="liberacao" value="${esc(String(c.liberacao).slice(0, 5))}"></label>
         <label class="field"><span>WhatsApp da clínica <em>(só números, com DDI e DDD)</em></span><input class="input" name="whatsapp" inputmode="numeric" placeholder="5514999999999" value="${esc(c.whatsapp_clinica || '')}"></label>
         <label class="field"><span>Palavra-código dos agendamentos</span><input class="input" name="palavra" value="${esc(c.palavra_codigo || '')}"></label>

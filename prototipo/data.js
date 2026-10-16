@@ -197,7 +197,7 @@
 
   const campanha = {
     nome: 'Jornada Ana + Eleviê — Edição 1',
-    inicio: '2026-11-02', // segunda-feira: o dia 6 cai no sábado e os balanços (7 e 14) no domingo
+    inicio: '2026-10-16', // sexta-feira: começo da edição 1
     fuso: 'America/Sao_Paulo',
     liberacao: '06:00',
     semanas: [

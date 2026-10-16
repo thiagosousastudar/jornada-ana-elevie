@@ -122,7 +122,7 @@ export function telaDia(pedido) {
   const hoje = diaHoje();
   if (hoje === 0) {
     return shell(`<div class="p-head"><div class="eyebrow">Olá, ${esc(chamado(S.perfil))}</div><h1>Quase lá</h1></div>
-      <div class="p-body">${bannerSimulado()}<div class="card empty">${ic('calendar', 'big')}<h2>A jornada começa em ${fmtCurto(c, 1)}</h2><p class="muted">O dia 1 libera às ${String(c.liberacao).slice(0, 5)}. Enquanto isso, prepare-se: tenha uma fita métrica por perto.</p></div></div>`, 'hoje');
+      <div class="p-body">${bannerSimulado()}${bannerInstalar()}<div class="card empty">${ic('calendar', 'big')}<h2>A jornada começa em ${fmtCurto(c, 1)}</h2><p class="muted">O dia 1 libera às ${String(c.liberacao).slice(0, 5)}. Enquanto isso, prepare-se: tenha uma fita métrica por perto.</p></div></div>`, 'hoje');
   }
   const limite = Math.min(hoje, 21);
   const n = pedido ? Math.max(1, Math.min(Number(pedido) || limite, 21)) : limite;
@@ -344,7 +344,7 @@ export function telaCheckin(pedido) {
         <button class="btn ghost sm" data-act="editar-checkin">Alterar resposta</button></div>`;
   return shell(`<div class="p-head"><h1>Check-in</h1><p class="muted small" style="margin:0">Dia ${n} · ${esc(dia.tema)}</p></div>
     <div class="p-body">${bannerSimulado()}
-      ${bal ? '<div class="notice info"><strong>Domingo de balanço</strong>As perguntas da semana vêm junto com o check-in.</div>' : ''}
+      ${bal ? '<div class="notice info"><strong>Dia de balanço</strong>As perguntas da semana vêm junto com o check-in.</div>' : ''}
       ${form}
       <p class="tiny muted" style="margin:10px 4px">Respondeu aqui? Não precisa repetir no grupo do WhatsApp.</p>
       ${hist.length ? `<div class="card"><h3>Seus últimos check-ins</h3>${hist.map((c) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--sep)"><span>Dia ${c.dia}</span><span class="muted">${FEITO[c.feito]} · “${esc(c.palavra)}”</span></div>`).join('')}</div>` : ''}
