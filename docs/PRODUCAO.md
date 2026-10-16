@@ -81,6 +81,15 @@ select public.definir_papel('dra.nelly@email.com', 'nelly');
 3. **Deploy**. A região já vem configurada para São Paulo (`gru1`) no `vercel.json`, junto com os cabeçalhos de segurança.
 4. Domínio próprio (ex.: `jornada.elevie.com.br`): em **Settings › Domains**. Depois, atualize o endereço no Supabase (item 2.4).
 
+## 3.1 Primeiro acesso e testes
+
+1. Crie a sua conta no app (aba "Criar conta"), preencha o nome e entre na jornada.
+2. No **SQL Editor** do Supabase (ou `supabase db query --linked`), torne-se admin:
+   `update public.perfis set papel = 'admin' where email = 'seu-email';`
+3. Recarregue o app: a aba **Equipe** aparece. Em **Acessos e senhas** você define o papel das outras pessoas (equipe, Dra. Nelly, admin).
+4. Para testar antes do início da campanha, use **Testar a jornada** no menu da equipe: simula um dia só na sua tela.
+5. Dados de teste: apague pelo SQL Editor (`delete from auth.users where email = '...'` remove a conta e tudo que ela criou) e as fotos pelo Storage.
+
 ## 4. Rodar no computador
 
 ```bash

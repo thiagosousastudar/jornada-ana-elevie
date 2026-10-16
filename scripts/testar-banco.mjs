@@ -136,6 +136,19 @@ r = await tenta(U.camila, `insert into storage.objects (bucket_id, name) values 
 r = await tenta(U.bia, `select count(*) n from storage.objects`); check(Number(r.rows[0].n) === 0, 'outra participante não vê a foto');
 r = await tenta(U.equipe, `select count(*) n from storage.objects`); check(Number(r.rows[0].n) === 1, 'equipe vê a foto para revisar');
 
+console.log('Revisão do próprio envio (equipe que também participa):');
+await tenta(U.equipe, "select public.inscrever('edicao-1')");
+r = await tenta(U.equipe, `insert into public.registros (tarefa_id, perfil_id, status, foto_path) values ('${await tarefa('d2-mov')}', '${U.equipe}', 'aguardando_revisao', '${U.equipe}/d2-mov.jpg') returning id`);
+check(r.ok, 'equipe que participa envia a própria foto');
+const proprio = r.rows && r.rows[0].id;
+r = await tenta(U.equipe, `update public.registros set status = 'aprovada' where id = '${proprio}'`);
+check(!r.ok, 'não se aprova direto pela tabela');
+r = await tenta(U.equipe, `select public.revisar_registro('${proprio}', true)`);
+check(r.ok, 'revisa o próprio envio pela função oficial');
+r = await tenta(U.camila, `select set_config('app.revisando', '1', true)`);
+r = await tenta(U.camila, `update public.registros set status = 'aprovada' where perfil_id = '${U.camila}' and status <> 'aprovada'`);
+check(!r.ok || (r.rows || []).length === 0, 'participante não consegue se aprovar nem forçando a marca de revisão');
+
 console.log('Senha (login por e-mail e senha):');
 const ADMIN = '55555555-5555-5555-5555-555555555555';
 await db.exec(`insert into auth.users (id, email) values ('${ADMIN}', 'admin@elevie.com'); update public.perfis set papel = 'admin' where id = '${ADMIN}';`);

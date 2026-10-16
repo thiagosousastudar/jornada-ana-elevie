@@ -38,10 +38,9 @@ npm run prototipo    # protótipo clicável em http://localhost:3200
 
 ## Etapas
 
-1. **Fundação (feita)**:
-   - estrutura do projeto, banco com RLS testado, bucket de fotos e seed dos 21 dias;
-   - login com e-mail e senha ("esqueci" pelo WhatsApp e senha provisória gerada pela equipe), perfil (nome e apelido), entrada na jornada com consentimentos;
-   - tela "Hoje" lendo do banco, deploy na Vercel e CI no GitHub.
-2. **Telas da participante**: envio das tarefas com foto, "não consegui", check-in com enquete e balanço, caixinha, compartilhar no Instagram, antes e depois privado, progresso e avisos (portados do protótipo).
-3. **Telas da equipe**: painel, revisão em grade, caixinha (triagem e Dra. Nelly), check-ins, configurar dias e semanas, exportação CSV.
+1. **Fundação (feita)**: estrutura do projeto, banco com RLS testado (66 testes), bucket de fotos, seed dos 21 dias, login por e-mail e senha, perfil, entrada na jornada com consentimentos, deploy na Vercel e CI no GitHub.
+2. **Telas da participante (feitas)**: Hoje/dia, tarefa com foto de comprovação (cinco tipos de registro), "não consegui", rascunho, correção pedida pela equipe, check-in com enquete e balanço, caixinha (anônima), compartilhar no Instagram, progresso, antes e depois privado (só no aparelho), avisos e autorizações.
+3. **Área da equipe (feita)**: painel, ficha da participante, revisão em grade com aprovação em lote, caixinha (triagem e Dra. Nelly), check-ins, configurar dias (inclui aprovação do conteúdo da Dra. Nelly), campanha (datas, WhatsApp, perfis do Instagram), acessos e senhas, exportação CSV e "testar a jornada" (simula um dia sem afetar as participantes).
 4. **Lançamento**: checklist do `docs/PRODUCAO.md`, piloto e campanha.
+
+Ainda fora do app (Fase B do levantamento): calendário editorial dos Stories com aprovação e métricas manuais de campanha (marcações e mensagens).
