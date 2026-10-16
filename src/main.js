@@ -165,6 +165,11 @@ async function render() {
     }
     if (!S.inscricao || !(S.consent.termos && S.consent.termos.aceito)) { pintar(telaBoasVindas()); return; }
     await part.preparar(rota, a1);
+    // Primeiro passo obrigatório: sem o ponto de partida, as outras ações mostram o aviso.
+    if (['tarefa', 'checkin', 'caixinha'].includes(rota) && !part.pontoDePartidaFeito()) {
+      pintar(part.telaPrecisaPartida());
+      return;
+    }
     switch (rota) {
       case 'tarefa': pintar(part.telaTarefa(a1)); break;
       case 'dia': pintar(part.telaDia(a1)); break;

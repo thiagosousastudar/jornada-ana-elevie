@@ -26,6 +26,36 @@ const temUrgencia = (t) => URGENCIA.some((k) => String(t || '').toLowerCase().in
 const diaPorNumero = (n) => S.dias.find((d) => d.numero === n);
 const regDe = (t) => S.registros.find((r) => r.tarefa_id === t.id) || { status: 'nao_iniciada' };
 const respostasDe = (t) => (t.privada ? ((S.privados[t.id] || {}).respostas || {}) : (regDe(t).respostas || {}));
+// Ponto de partida (dia 1): primeiro passo obrigatório antes das outras ações.
+// As medidas e fotos ficam só no aparelho; no servidor fica só a marca de que foi feito
+// (assim não trava quem instala o app ou troca de celular).
+function tarefaPartida() {
+  for (const dia of S.dias) for (const tarefa of dia.tarefas) if (tarefa.registro_corpo === 'inicio') return tarefa;
+  return null;
+}
+export function pontoDePartidaFeito() {
+  if (S.privado.inicio) return true;
+  const t = tarefaPartida();
+  return !t || !!((S.privados[t.id] || {}).respostas || {}).ponto_partida_em;
+}
+async function marcarPartidaNoServidor() {
+  const t = tarefaPartida();
+  if (!t) return;
+  const respostas = { ...((S.privados[t.id] || {}).respostas || {}), ponto_partida_em: new Date().toISOString() };
+  try {
+    await api.salvarRegistroPrivado(t.id, S.perfil.id, respostas);
+    S.privados[t.id] = { ...(S.privados[t.id] || {}), respostas };
+  } catch { /* sem rede: o registro local já libera neste aparelho */ }
+}
+
+export function telaPrecisaPartida() {
+  return shell(`<div class="p-body" style="padding-top:16px"><a class="back" href="#/">Hoje</a>
+    <div class="card empty">${ic('lock', 'big')}<h2>Primeiro, o seu ponto de partida</h2>
+      <p class="muted">Antes de registrar tarefas, check-ins ou mensagens, faça o seu ponto de partida: medidas com fita métrica e fotos de frente, costas e perfil.</p>
+      <p class="small muted">Tudo fica guardado só no seu celular, para você comparar no dia 21. Leva uns 5 minutos.</p>
+      <a class="btn block" href="#/privado/inicio">Fazer meu ponto de partida</a></div></div>`, 'hoje');
+}
+
 function achar(codigo) {
   for (const dia of S.dias) for (const tarefa of dia.tarefas) if (tarefa.codigo === codigo) return { dia, tarefa };
   return {};
@@ -71,7 +101,7 @@ export async function preparar(rota, arg) {
       if (r.foto_path) await precarregarFotos([r.foto_path]);
     }
   }
-  if (rota === 'privado' || rota === 'dia' || rota === 'hoje' || rota === 'progresso' || rota === 'tarefa' || !rota) {
+  if (['privado', 'dia', 'hoje', 'progresso', 'tarefa', 'checkin', 'caixinha'].includes(rota) || !rota) {
     S.privado.inicio = await lerPrivado(S.perfil.id, 'inicio').catch(() => null);
     S.privado.final = await lerPrivado(S.perfil.id, 'final').catch(() => null);
   }
@@ -104,7 +134,7 @@ function ctaCard(n) {
 }
 
 function corpoBanner(n) {
-  if (n === 1 && !S.privado.inicio) return `<a href="#/privado/inicio" style="text-decoration:none"><div class="notice lock"><strong>${ic('lock')} Comece pelo seu ponto de partida</strong>Medidas e fotos de frente, costas e perfil. Ficam só no seu celular, para você comparar no dia 21.</div></a>`;
+  if (!pontoDePartidaFeito()) return `<a href="#/privado/inicio" style="text-decoration:none"><div class="notice lock"><strong>${ic('lock')} Comece pelo seu ponto de partida</strong>Medidas e fotos de frente, costas e perfil. Ficam só no seu celular, para você comparar no dia 21. As outras tarefas liberam depois deste passo.</div></a>`;
   if (n === 21 && !S.privado.final) return `<a href="#/privado/final" style="text-decoration:none"><div class="notice lock"><strong>${ic('lock')} Hora do seu fechamento</strong>Refaça as medidas e as fotos e veja o seu antes e depois, só para você.</div></a>`;
   return '';
 }
@@ -562,7 +592,10 @@ async function gravarTarefa(form, { rascunho }) {
   let caminho = S.ui.fotoAtual;
   if (S.ui.fotoBlob) caminho = await enviarFoto(S.perfil.id, t.codigo, S.ui.fotoBlob);
   const status = rascunho ? 'em_andamento' : (caminho ? 'aguardando_revisao' : 'registrada');
-  if (t.privada) await api.salvarRegistroPrivado(t.id, S.perfil.id, resp);
+  if (t.privada) {
+    const marca = ((S.privados[t.id] || {}).respostas || {}).ponto_partida_em;
+    await api.salvarRegistroPrivado(t.id, S.perfil.id, marca ? { ...resp, ponto_partida_em: marca } : resp);
+  }
   await api.salvarRegistro({
     tarefa_id: t.id, perfil_id: S.perfil.id, status, respostas: t.privada ? {} : resp, foto_path: caminho, motivo_nao: null,
   });
@@ -713,6 +746,7 @@ export const envios = {
       await salvarPrivado(S.perfil.id, fase, { medidas, sentir, fotos, nota: String(fd.get('nota') || '').trim() });
     } catch { toast('Sem espaço no navegador para guardar as fotos. Tente fotos menores.'); return; }
     S.privado[fase] = await lerPrivado(S.perfil.id, fase);
+    if (fase === 'inicio') await marcarPartidaNoServidor();
     S.ui = {};
     toast('Guardado só no seu celular.');
     location.hash = fase === 'final' && S.privado.inicio ? '#/privado/comparar' : '#/privado';
