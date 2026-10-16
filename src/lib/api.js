@@ -127,6 +127,15 @@ export async function meusCheckins(campanhaId, perfilId) {
   return ok(await supabase.from('checkins').select('*').eq('campanha_id', campanhaId).eq('perfil_id', perfilId));
 }
 
+// Dias reabertos pelo admin como exceção (24 horas).
+export async function minhasReaberturas(campanhaId, perfilId) {
+  return ok(await supabase.from('reaberturas').select('*').eq('campanha_id', campanhaId).eq('perfil_id', perfilId));
+}
+
+export async function reabrirDia(perfilId, campanhaId, dia, motivo) {
+  return ok(await supabase.rpc('reabrir_dia', { p_perfil: perfilId, p_campanha: campanhaId, p_dia: dia, p_motivo: motivo }));
+}
+
 export async function salvarCheckin(linha) {
   return ok(await supabase.from('checkins').upsert(linha, { onConflict: 'campanha_id,perfil_id,dia' }).select().single());
 }
@@ -152,7 +161,7 @@ export async function registrarCta(campanhaId, perfilId, dia) {
 // Equipe
 // ---------------------------------------------------------------------------
 export async function dadosDaEquipe(campanhaId) {
-  const [inscricoes, perfis, registros, checkins, caixinha, consent, ctas, alteracoes, historico] = await Promise.all([
+  const [inscricoes, perfis, registros, checkins, caixinha, consent, ctas, alteracoes, historico, reaberturas] = await Promise.all([
     supabase.from('inscricoes').select('*').eq('campanha_id', campanhaId),
     supabase.from('perfis').select('id, nome, apelido, email, papel, criado_em'),
     supabase.from('registros').select('*'),
@@ -162,10 +171,12 @@ export async function dadosDaEquipe(campanhaId) {
     supabase.from('cta_cliques').select('*').eq('campanha_id', campanhaId),
     supabase.from('alteracoes').select('*').eq('campanha_id', campanhaId).order('em', { ascending: false }).limit(200),
     supabase.from('caixinha_historico').select('*').order('em', { ascending: true }),
+    supabase.from('reaberturas').select('*').eq('campanha_id', campanhaId).order('em', { ascending: false }),
   ]);
   return {
     inscricoes: ok(inscricoes), perfis: ok(perfis), registros: ok(registros), checkins: ok(checkins),
     caixinha: ok(caixinha), consent: ok(consent), ctas: ok(ctas), alteracoes: ok(alteracoes), historicoCaixinha: ok(historico),
+    reaberturas: ok(reaberturas),
   };
 }
 

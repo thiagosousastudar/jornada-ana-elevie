@@ -26,6 +26,19 @@ const temUrgencia = (t) => URGENCIA.some((k) => String(t || '').toLowerCase().in
 const diaPorNumero = (n) => S.dias.find((d) => d.numero === n);
 const regDe = (t) => S.registros.find((r) => r.tarefa_id === t.id) || { status: 'nao_iniciada' };
 const respostasDe = (t) => (t.privada ? ((S.privados[t.id] || {}).respostas || {}) : (regDe(t).respostas || {}));
+
+// Trava dos dias: o dia fecha quando o seguinte libera (06:00). Exceções: correção pedida pela
+// equipe (24 horas) e dia reaberto pelo admin. A regra de verdade está no banco; aqui só a tela.
+function reabertoAte(n) {
+  const ativas = (S.reaberturas || []).filter((x) => x.dia === n && Date.parse(x.ate) > Date.now());
+  return ativas.length ? new Date(Math.max(...ativas.map((x) => Date.parse(x.ate)))) : null;
+}
+export const diaEncerrado = (n) => diaHoje() > n && !reabertoAte(n);
+const ajusteAberto = (r) => !!(r.ajuste_ate && Date.parse(r.ajuste_ate) > Date.now());
+const podeRegistrar = (t, n) => !diaEncerrado(n) || ajusteAberto(regDe(t));
+const NAO_ENVIADA = ['nao_iniciada', 'em_andamento'];
+const avisoEncerrado = (n) => `<div class="notice lock"><strong>${ic('lock')} Dia ${n} encerrado</strong>Cada dia fica aberto até a liberação do dia seguinte, às ${String(S.campanha.liberacao).slice(0, 5)}. O que você enviou continua aqui; o que não foi enviado ficou como não registrado.</div>`;
+const avisoReaberto = (n) => `<div class="notice warn"><strong>Dia ${n} reaberto para você</strong>A equipe liberou este dia até ${fmtDT(reabertoAte(n).toISOString())}. Depois disso ele fecha de novo.</div>`;
 // Ponto de partida (dia 1): primeiro passo obrigatório antes das outras ações.
 // As medidas e fotos ficam só no aparelho; no servidor fica só a marca de que foi feito
 // (assim não trava quem instala o app ou troca de celular).
@@ -165,21 +178,23 @@ export function telaDia(pedido) {
     conteudo = `<div class="card empty">${ic('lock', 'big')}<h2>Dia ${n} · ${esc(dia.tema)}</h2><p class="muted">Libera em ${fmtCurto(c, n)} às ${String(c.liberacao).slice(0, 5)}.</p></div>`;
   } else {
     const ck = ckDoDia(n);
+    const encerrado = diaEncerrado(n);
+    const selo = (t) => (encerrado && NAO_ENVIADA.includes(regDe(t).status) && !ajusteAberto(regDe(t)) ? '<span class="badge b-nao_iniciada">Não registrada</span>' : badge(regDe(t).status));
     const tarefas = dia.tarefas.map((t) => `<a class="task-card" href="#/tarefa/${t.codigo}">
         <div class="ico ${t.frente}">${ic(FRENTES[t.frente].icone)}</div>
-        <div class="t"><div class="t-top"><span class="frente f-${t.frente}">${FRENTES[t.frente].nome}</span>${badge(regDe(t).status)}</div><h3>${esc(t.titulo)}</h3><div class="reg">${esc(tipoDesc(t))}</div></div>
+        <div class="t"><div class="t-top"><span class="frente f-${t.frente}">${FRENTES[t.frente].nome}</span>${selo(t)}</div><h3>${esc(t.titulo)}</h3><div class="reg">${esc(tipoDesc(t))}</div></div>
         <div class="trail">${ic('chevron', 'chev')}</div></a>`).join('');
-    conteudo = `${corpoBanner(n)}${nellyCard(dia)}
+    conteudo = `${encerrado ? avisoEncerrado(n) : (n < hoje && reabertoAte(n) ? avisoReaberto(n) : '')}${corpoBanner(n)}${nellyCard(dia)}
       <div class="sec-title">${ehHoje ? 'Tarefas de hoje' : 'Tarefas do dia'}</div>
       <div class="group">${tarefas}</div>
       <div class="group">
         <a class="task-card" href="#/checkin/${n}"><div class="ico checkin">${ic('bubble')}</div>
-          <div class="t"><div class="t-top"><span class="frente f-checkin">Check-in</span>${ck ? '<span class="badge b-registrada">Feito</span>' : '<span class="badge b-nao_iniciada">Pendente</span>'}</div><h3>${ck ? 'Check-in respondido' : 'Como foi o seu dia?'}</h3><div class="reg">${ck ? `Você disse: “${esc(ck.palavra)}”` : '2 perguntas rápidas'}</div></div>
+          <div class="t"><div class="t-top"><span class="frente f-checkin">Check-in</span>${ck ? '<span class="badge b-registrada">Feito</span>' : `<span class="badge b-nao_iniciada">${encerrado ? 'Não respondido' : 'Pendente'}</span>`}</div><h3>${ck ? 'Check-in respondido' : 'Como foi o seu dia?'}</h3><div class="reg">${ck ? `Você disse: “${esc(ck.palavra)}”` : '2 perguntas rápidas'}</div></div>
           <div class="trail">${ic('chevron', 'chev')}</div></a>
         ${dia.caixinha ? `<a class="task-card" href="#/caixinha/${n}"><div class="ico caixinha">${ic('tray')}</div><div class="t"><span class="frente f-caixinha">Caixinha da Ana</span><h3>${esc(dia.caixinha.pergunta)}</h3><div class="reg">Pode ser anônimo</div></div><div class="trail">${ic('chevron', 'chev')}</div></a>` : ''}
       </div>
       ${dia.cta ? ctaCard(n) : ''}
-      ${!ehHoje ? '<p class="small muted">Você ainda pode registrar tarefas de dias anteriores.</p>' : ''}`;
+`;
   }
   const feitosDia = n <= hoje ? dia.tarefas.filter((t) => ENVIADAS.includes(regDe(t).status)).length : 0;
   return shell(`<div class="p-head"><div class="eyebrow">Olá, ${esc(chamado(S.perfil))} · ${fmtLongo(c, n)}</div><h1>${hoje > 21 && ehHoje ? 'Jornada concluída' : ehHoje ? 'Hoje' : 'Dia ' + n}</h1></div>
@@ -323,17 +338,23 @@ export function telaTarefa(codigo) {
   const r = regDe(t);
   const x = respostasDe(t);
   const fr = FRENTES[t.frente];
-  const editando = S.ui.editando || ['nao_iniciada', 'em_andamento', 'precisa_ajuste'].includes(r.status);
+  const travada = !podeRegistrar(t, dia.numero);
+  const editando = !travada && (S.ui.editando || ['nao_iniciada', 'em_andamento', 'precisa_ajuste'].includes(r.status));
+  const prazoAjuste = diaEncerrado(dia.numero) && ajusteAberto(r)
+    ? `<div class="tiny" style="margin-top:6px"><strong>Prazo para corrigir: até ${fmtDT(r.ajuste_ate)}.</strong></div>` : '';
   let topo = '';
-  if (r.status === 'precisa_ajuste') topo = `<div class="notice bad"><strong>O que corrigir</strong>${esc(r.motivo_ajuste || 'A equipe pediu um ajuste.')}${r.revisado_em ? `<div class="tiny" style="margin-top:6px">Equipe · ${fmtDT(r.revisado_em)}</div>` : ''}</div>`;
+  if (r.status === 'precisa_ajuste') topo = `<div class="notice bad"><strong>O que corrigir</strong>${esc(r.motivo_ajuste || 'A equipe pediu um ajuste.')}${r.revisado_em ? `<div class="tiny" style="margin-top:6px">Equipe · ${fmtDT(r.revisado_em)}</div>` : ''}${prazoAjuste}${travada ? '<div class="tiny" style="margin-top:6px">O prazo de 24 horas para corrigir terminou.</div>' : ''}</div>`;
+  else if (travada && NAO_ENVIADA.includes(r.status)) topo = '<div class="card"><p class="muted" style="margin:0">Esta tarefa não foi registrada.</p></div>';
   else if (r.status === 'aguardando_revisao') topo = '<div class="notice warn"><strong>Recebido! Em revisão</strong>A equipe vai conferir a sua foto. Você verá o resultado aqui, sem precisar perguntar no WhatsApp.</div>';
   else if (r.status === 'aprovada') topo = `<div class="notice ok"><strong>Aprovada</strong>Conferida pela equipe em ${fmtDT(r.revisado_em)}.</div>`;
   else if (r.status === 'registrada') topo = `<div class="notice ok"><strong>Registrada</strong>${t.privada ? 'Ficou guardado só para você.' : 'Obrigada por registrar.'} Enviado em ${fmtDT(r.enviado_em)}.</div>`;
   else if (r.status === 'nao_realizada') topo = `<div class="notice info"><strong>Tudo bem.</strong>Um dia difícil não apaga o caminho.${t.alternativa ? ' ' + esc(t.alternativa) : ''}</div>`;
   else if (r.status === 'em_andamento') topo = `<div class="notice info">Rascunho salvo em ${fmtDT(r.enviado_em)}. Termine quando puder.</div>`;
+  if (travada) topo = avisoEncerrado(dia.numero) + topo;
+  else if (diaEncerrado(dia.numero) === false && dia.numero < diaHoje() && reabertoAte(dia.numero)) topo = avisoReaberto(dia.numero) + topo;
   const ev = t.evidencia || {};
-  const resumo = `${corpoLink(t)}<div class="card">${resumoRegistro(t, r, x)}</div>
-    ${['registrada', 'nao_realizada'].includes(r.status) ? '<div class="btn-row" style="margin-top:14px"><button class="btn ghost" data-act="editar-tarefa">Editar registro</button></div>' : ''}`;
+  const resumo = travada && NAO_ENVIADA.includes(r.status) ? corpoLink(t) : `${corpoLink(t)}<div class="card">${resumoRegistro(t, r, x)}</div>
+    ${!travada && ['registrada', 'nao_realizada'].includes(r.status) ? '<div class="btn-row" style="margin-top:14px"><button class="btn ghost" data-act="editar-tarefa">Editar registro</button></div>' : ''}`;
   return shell(`<div class="p-body" style="padding-top:16px"><a class="back" href="#/dia/${dia.numero}">Dia ${dia.numero} · ${esc(dia.tema)}</a>
     <span class="frente f-${t.frente}">${ic(fr.icone)} ${fr.nome}</span>
     <h1 style="margin-top:6px">${esc(t.titulo)}</h1>
@@ -356,8 +377,11 @@ export function telaCheckin(pedido) {
   const bal = dia.balanco;
   const final = n === 21;
   const hist = S.checkins.slice().sort((a, b) => b.dia - a.dia).slice(0, 7);
-  const editando = S.ui.editarCk || !ck;
-  const form = editando
+  const encerrado = diaEncerrado(n);
+  const editando = !encerrado && (S.ui.editarCk || !ck);
+  const form = encerrado && !ck
+    ? `${avisoEncerrado(n)}<div class="card"><p class="muted" style="margin:0">O check-in do dia ${n} não foi respondido.</p></div>`
+    : editando
     ? `<form data-form="checkin" data-n="${n}" class="card" novalidate>
         <div class="field"><span style="display:block;font-weight:600;margin-bottom:8px">Você fez o dia ${n}?</span>
           <div class="choices">${Object.entries(FEITO).map(([v, l]) => `<label class="choice"><input type="radio" name="feito" value="${v}" ${ck && ck.feito === v ? 'checked' : ''} hidden>${l}</label>`).join('')}</div><div data-errfor="feito"></div></div>
@@ -371,10 +395,11 @@ export function telaCheckin(pedido) {
         <button class="btn block" type="submit">Enviar check-in</button></form>`
     : `<div class="card"><div class="notice ok" style="margin:0 0 10px"><strong>Check-in do dia ${n} respondido</strong>${FEITO[ck.feito]} · “${esc(ck.palavra)}”${ck.enquete ? ` · enquete: ${esc(ck.enquete)}` : ''} · ${fmtDT(ck.em)}</div>
         ${enq && enq.alerta && ck.enquete === enq.alerta.opcao ? `<div class="notice warn small">${esc(enq.alerta.msg)}</div>` : ''}
-        <button class="btn ghost sm" data-act="editar-checkin">Alterar resposta</button></div>`;
+        ${encerrado ? '' : '<button class="btn ghost sm" data-act="editar-checkin">Alterar resposta</button>'}</div>`;
   return shell(`<div class="p-head"><h1>Check-in</h1><p class="muted small" style="margin:0">Dia ${n} · ${esc(dia.tema)}</p></div>
     <div class="p-body">${bannerSimulado()}
-      ${bal ? '<div class="notice info"><strong>Dia de balanço</strong>As perguntas da semana vêm junto com o check-in.</div>' : ''}
+      ${!encerrado && n < hoje && reabertoAte(n) ? avisoReaberto(n) : ''}
+      ${bal && !encerrado ? '<div class="notice info"><strong>Dia de balanço</strong>As perguntas da semana vêm junto com o check-in.</div>' : ''}
       ${form}
       <p class="tiny muted" style="margin:10px 4px">Respondeu aqui? Não precisa repetir no grupo do WhatsApp.</p>
       ${hist.length ? `<div class="card"><h3>Seus últimos check-ins</h3>${hist.map((c) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--sep)"><span>Dia ${c.dia}</span><span class="muted">${FEITO[c.feito]} · “${esc(c.palavra)}”</span></div>`).join('')}</div>` : ''}
@@ -544,11 +569,12 @@ export function telaAvisos() {
 // Gravações
 // ---------------------------------------------------------------------------
 async function recarregarMeus() {
-  const [registros, privados, checkins, caixinha, autoria] = await Promise.all([
+  const [registros, privados, checkins, caixinha, autoria, reaberturas] = await Promise.all([
     api.meusRegistros(S.perfil.id), api.meusPrivados(S.perfil.id), api.meusCheckins(S.campanha.id, S.perfil.id),
-    api.caixinhaVisivel(), api.minhaAutoria(),
+    api.caixinhaVisivel(), api.minhaAutoria(), api.minhasReaberturas(S.campanha.id, S.perfil.id),
   ]);
   S.registros = registros; S.privados = privados; S.checkins = checkins; S.caixinha = caixinha; S.autoria = autoria;
+  S.reaberturas = reaberturas;
 }
 export const recarregarMinhaJornada = recarregarMeus;
 

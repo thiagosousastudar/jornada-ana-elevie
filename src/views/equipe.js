@@ -183,6 +183,25 @@ function painel() {
       <tbody>${linhas || '<tr><td colspan="6" class="muted">Nenhuma participante neste filtro.</td></tr>'}</tbody></table></div>`;
 }
 
+// Exceção à trava dos dias: o admin reabre um dia encerrado para esta participante por 24 horas.
+function cartaoReabrir(id, n) {
+  const minhas = (S.eq.reaberturas || []).filter((r) => r.perfil_id === id);
+  const ativas = minhas.filter((r) => Date.parse(r.ate) > Date.now());
+  const lista = minhas.length
+    ? `<ul class="small" style="margin:8px 0 0;padding-left:18px">${minhas.slice(0, 5).map((r) => `<li>Dia ${r.dia} · ${Date.parse(r.ate) > Date.now() ? `<strong>aberto até ${fmtDT(r.ate)}</strong>` : `fechou em ${fmtDT(r.ate)}`} · ${esc(r.motivo)}</li>`).join('')}</ul>` : '';
+  const encerrados = S.dias.filter((d) => d.numero < n);
+  if (S.perfil.papel !== 'admin') {
+    return ativas.length ? `<div class="card" style="margin-bottom:16px"><h3>Dias reabertos</h3>${lista}</div>` : '';
+  }
+  return `<div class="card" style="margin-bottom:16px"><h3>Reabrir um dia</h3>
+    <p class="small muted" style="margin:0 0 10px">Cada dia trava quando o seguinte abre. Como exceção (ex.: ficou sem internet), reabra um dia só para ela por 24 horas. Fica registrado no histórico.</p>
+    ${encerrados.length ? `<form data-form="reabrir" data-id="${id}" novalidate><div class="two-col">
+      <label class="field"><span>Dia</span><select class="input" name="dia">${encerrados.slice().reverse().map((d) => `<option value="${d.numero}">Dia ${d.numero} · ${esc(d.tema)}</option>`).join('')}</select></label>
+      <label class="field"><span>Motivo</span><input class="input" name="motivo" maxlength="300" placeholder="ex.: ficou sem internet"><div data-errfor="motivo"></div></label></div>
+      <button class="btn sm" type="submit">Reabrir por 24 horas</button></form>` : '<p class="small muted" style="margin:0">Nenhum dia encerrado ainda.</p>'}
+    ${lista}</div>`;
+}
+
 function ficha(id) {
   const p = perfil(id);
   if (!p) return '<p>Participante não encontrada.</p>';
@@ -208,6 +227,7 @@ function ficha(id) {
       <div class="card"><h3>Consentimentos</h3><dl class="kv">${c('termos', 'Regras e privacidade')}${c('saude', 'Aviso de saúde')}${c('comunicacoes', 'Comunicações')}${c('repost', 'Repost')}</dl>
         ${repost && repost.aceito ? '' : '<div class="notice warn small" style="margin:10px 0 0">Sem autorização de repost: não compartilhar conteúdos desta participante.</div>'}</div>
     </div>
+    ${cartaoReabrir(id, n)}
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Dia</th><th>Alimentação</th><th>Movimento</th><th>Mentalidade</th><th>Compartilhar</th><th>Check-in</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
 }
 
@@ -812,6 +832,14 @@ export const envios = {
     try { await api.definirPapel(email, String(fd.get('papel'))); } catch (e) { erros(form, [['email', e.message]]); return; }
     form.reset();
     await atualizar('Papel atualizado.');
+  },
+
+  reabrir: async (form, fd) => {
+    const motivo = String(fd.get('motivo') || '').trim();
+    if (!motivo) { erros(form, [['motivo', 'Conte o motivo da reabertura.']]); return; }
+    let ate;
+    try { ate = await api.reabrirDia(form.dataset.id, S.campanha.id, Number(fd.get('dia')), motivo); } catch (e) { erros(form, [['motivo', e.message]]); return; }
+    await atualizar(`Dia ${fd.get('dia')} reaberto até ${fmtDT(ate)}.`);
   },
 
   excluir: async (form, fd) => {

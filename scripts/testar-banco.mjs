@@ -39,6 +39,8 @@ for (const f of readdirSync(proj + '/supabase/migrations').sort()) {
 }
 try { await db.exec(readFileSync(proj + '/supabase/seed.sql', 'utf8')); check(true, 'seed.sql'); } catch (e) { check(false, 'seed.sql → ' + e.message); }
 const cnt = async (sql) => Number((await db.query(sql)).rows[0].n);
+// Os testes não podem depender da data em que rodam: a campanha começa "hoje" (dias abertos).
+await db.exec(`update public.campanhas set inicio = (now() at time zone 'America/Sao_Paulo')::date where slug = 'edicao-1'`);
 check(await cnt('select count(*) n from public.tarefas') === 84, '84 tarefas no banco');
 check(await cnt("select count(*) n from public.conteudos_nelly where status = 'em_revisao'") === 5, '5 conteúdos da Dra. Nelly em revisão');
 check(await cnt('select count(*) n from public.tarefas where privada') > 0, 'tarefas privadas marcadas automaticamente');
@@ -178,6 +180,43 @@ r = await tenta(U.bia, `select count(*) n from storage.objects where bucket_id =
 await tenta(U.nelly, `update public.conteudos_nelly set status = 'aprovado' where dia_id = '${d14}'`);
 await tenta(U.nelly, `update public.conteudos_nelly set midia_url = '${midia}' where dia_id = '${d14}'`);
 check(await cnt(`select count(*) n from public.conteudos_nelly where dia_id = '${d14}' and status = 'aprovado'`) === 1, 'a Dra. Nelly troca a própria mídia sem perder a aprovação');
+
+console.log('Trava dos dias encerrados:');
+await tenta(U.camila, `select public.enviar_caixinha('${camp}', 3, 'antes da trava', 'rotina', false)`);
+// Volta o início da campanha 10 dias: os dias 1 a 9 já fecharam (às 06:00 do dia seguinte).
+await db.exec(`update public.campanhas set inicio = inicio - 10 where id = '${camp}'`);
+r = await tenta(U.camila, `insert into public.registros (tarefa_id, perfil_id, status) values ('${await tarefa('d3-men')}', '${U.camila}', 'registrada')`);
+check(!r.ok && /encerrado/.test(r.erro), 'não registra tarefa de dia encerrado');
+r = await tenta(U.camila, `insert into public.checkins (campanha_id, perfil_id, dia, feito, palavra) values ('${camp}', '${U.camila}', 3, 'sim', 'ok')`);
+check(!r.ok && /encerrado/.test(r.erro), 'não responde check-in de dia encerrado');
+r = await tenta(U.camila, `update public.checkins set palavra = 'mudei' where perfil_id = '${U.camila}' and dia = 4`);
+check(!r.ok && /encerrado/.test(r.erro), 'não altera check-in de dia encerrado');
+r = await tenta(U.camila, `insert into public.registros (tarefa_id, perfil_id, status) values ('${await tarefa('d11-men')}', '${U.camila}', 'registrada')`);
+check(r.ok, 'o dia de hoje continua aberto');
+// Pedido de ajuste depois do dia fechar: 24 horas para corrigir
+await db.exec(`set session_replication_role = replica; insert into public.registros (tarefa_id, perfil_id, status, foto_path, respostas) values ('${await tarefa('d4-mov')}', '${U.camila}', 'aguardando_revisao', '${U.camila}/d4.jpg', '{"modo":"fiz"}'); set session_replication_role = origin;`);
+const regD4 = (await db.query(`select id from public.registros where tarefa_id = '${await tarefa('d4-mov')}'`)).rows[0].id;
+r = await tenta(ADMIN, `select public.revisar_registro('${regD4}', false, 'Foto escura')`); check(r.ok, 'equipe pede ajuste em dia já encerrado');
+check(await cnt(`select count(*) n from public.registros where id = '${regD4}' and ajuste_ate between now() + interval '23 hours' and now() + interval '25 hours'`) === 1, 'ajuste ganha prazo de 24 horas');
+r = await tenta(U.camila, `update public.registros set status = 'em_andamento' where id = '${regD4}'`); check(r.ok, 'salva rascunho da correção dentro do prazo');
+r = await tenta(U.camila, `update public.registros set status = 'aguardando_revisao', foto_path = '${U.camila}/d4-b.jpg' where id = '${regD4}'`); check(r.ok, 'reenvia a correção dentro do prazo (mesmo depois do rascunho)');
+r = await tenta(U.camila, `update public.registros set status = 'registrada' where id = '${regD4}'`); check(!r.ok && /encerrado/.test(r.erro), 'depois de reenviar, o dia volta a ficar travado');
+await db.exec(`set session_replication_role = replica; update public.registros set status = 'precisa_ajuste', ajuste_ate = now() - interval '1 hour' where id = '${regD4}'; set session_replication_role = origin;`);
+r = await tenta(U.camila, `update public.registros set status = 'aguardando_revisao', foto_path = '${U.camila}/d4-c.jpg' where id = '${regD4}'`); check(!r.ok && /encerrado/.test(r.erro), 'prazo do ajuste vencido: não corrige mais');
+// Reabertura pelo admin
+r = await tenta(U.equipe, `select public.reabrir_dia('${U.camila}', '${camp}', 3, 'Ficou sem internet')`); check(!r.ok && /admin/.test(r.erro), 'equipe não reabre dia');
+r = await tenta(ADMIN, `select public.reabrir_dia('${U.camila}', '${camp}', 3, '')`); check(!r.ok && /motivo/.test(r.erro), 'reabrir exige motivo');
+r = await tenta(ADMIN, `select public.reabrir_dia('${U.camila}', '${camp}', 11, 'teste')`); check(!r.ok && /aberto/.test(r.erro), 'não reabre dia que ainda está aberto');
+r = await tenta(ADMIN, `select public.reabrir_dia('${U.camila}', '${camp}', 3, 'Ficou sem internet')`); check(r.ok, 'admin reabre o dia 3 para a participante');
+r = await tenta(U.camila, `insert into public.registros (tarefa_id, perfil_id, status) values ('${await tarefa('d3-men')}', '${U.camila}', 'registrada')`); check(r.ok, 'participante registra no dia reaberto');
+r = await tenta(U.camila, `insert into public.checkins (campanha_id, perfil_id, dia, feito, palavra) values ('${camp}', '${U.camila}', 3, 'sim', 'ok')`); check(r.ok, 'e responde o check-in do dia reaberto');
+r = await tenta(U.bia, `insert into public.registros (tarefa_id, perfil_id, status) values ('${await tarefa('d3-men')}', '${U.bia}', 'registrada')`); check(!r.ok, 'a reabertura vale só para aquela participante');
+r = await tenta(U.camila, `select count(*) n from public.reaberturas`); check(Number(r.rows[0].n) === 1, 'participante vê a própria reabertura');
+r = await tenta(U.bia, `select count(*) n from public.reaberturas`); check(Number(r.rows[0].n) === 0, 'outra participante não vê');
+check(await cnt(`select count(*) n from public.alteracoes where resumo like 'Reabriu o dia 3%'`) === 1, 'reabertura fica no histórico');
+await db.exec(`update public.reaberturas set ate = now() - interval '1 minute'`);
+r = await tenta(U.camila, `update public.checkins set palavra = 'de novo' where perfil_id = '${U.camila}' and dia = 3`); check(!r.ok, 'reabertura vencida: o dia trava de novo');
+await db.exec(`update public.campanhas set inicio = inicio + 10 where id = '${camp}'`);
 
 console.log('Excluir cadastro:');
 r = await tenta(U.camila, `select public.enviar_caixinha('${camp}', 6, 'Pergunta com meu nome', 'rotina', false) as id`);
