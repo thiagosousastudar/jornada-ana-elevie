@@ -34,7 +34,7 @@ function campoSenha(nome, rotulo, auto, dica) {
 function telaLogin() {
   const criando = (S.ui.aba || 'entrar') === 'criar';
   return shell(`<div class="p-body login">
-    <div class="welcome-hero"><div class="logo">${ic('leaf')}</div><h1>Jornada Ana + Eleviê</h1><p class="muted">21 dias de hábitos, no seu ritmo.</p></div>
+    <div class="welcome-hero"><div class="logo">${ic('leaf')}</div><h1>Desafio 21 Dias</h1><p class="muted">21 dias de hábitos, no seu ritmo.</p></div>
     <div class="seg-light seg-full" role="tablist">
       <button type="button" role="tab" data-act="aba" data-v="entrar" class="${criando ? '' : 'on'}" aria-selected="${!criando}">Entrar</button>
       <button type="button" role="tab" data-act="aba" data-v="criar" class="${criando ? 'on' : ''}" aria-selected="${criando}">Criar conta</button>
@@ -208,7 +208,7 @@ const cliques = {
     const campo = $('[data-form=login] [name=email]');
     const email = campo ? campo.value.trim() : '';
     if (!WHATSAPP_SUPORTE) { toast('Fale com a equipe pelo grupo da jornada no WhatsApp.'); return; }
-    const msg = `Olá! Esqueci minha senha do app da Jornada Ana + Eleviê. ${email ? 'Meu e-mail de cadastro é: ' + email : 'Pode me ajudar?'}`;
+    const msg = `Olá! Esqueci minha senha do app Desafio 21 Dias. ${email ? 'Meu e-mail de cadastro é: ' + email : 'Pode me ajudar?'}`;
     window.open(`https://wa.me/${WHATSAPP_SUPORTE}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
   },
   sair: async () => { await sair(); },

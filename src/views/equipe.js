@@ -95,7 +95,7 @@ function estrutura(atual, conteudo) {
   const opcoes = ['<option value="">Dia real</option>'].concat(Array.from({ length: 21 }, (_, i) => `<option value="${i + 1}" ${S.diaSim === i + 1 ? 'selected' : ''}>Simular dia ${i + 1}</option>`)).join('');
   return `<div class="admin">
     <aside class="side">
-      <div class="brand"><span class="brand-ic">${ic('leaf')}</span><span>Jornada Ana + Eleviê<small>${esc(S.campanha.nome)} · Dia ${limiteDia()} de 21</small></span></div>
+      <div class="brand"><span class="brand-ic">${ic('leaf')}</span><span>Desafio 21 Dias<small>${esc(S.campanha.nome)} · Dia ${limiteDia()} de 21</small></span></div>
       ${itens.map(([k, l, i]) => `<a href="#/a/${k === 'painel' ? '' : k}" class="${atual === k ? 'on' : ''}"><span class="side-l">${ic(i)}${l}</span>${contador[k] ? `<span class="count">${contador[k]}</span>` : ''}</a>`).join('')}
       <hr>
       <a href="#/hoje"><span class="side-l">${ic('house')}Ver como participante</span></a>
@@ -559,7 +559,7 @@ export const cliques = {
   },
   'copiar-provisoria': async () => {
     const p = S.ui.provisoria;
-    const msg = `Olá! Sua senha provisória do app da Jornada Ana + Eleviê é: ${p.senha}\nEntre com o seu e-mail (${p.email}) e essa senha. O app vai pedir para você criar uma senha nova.`;
+    const msg = `Olá! Sua senha provisória do app Desafio 21 Dias é: ${p.senha}\nEntre com o seu e-mail (${p.email}) e essa senha. O app vai pedir para você criar uma senha nova.`;
     await navigator.clipboard.writeText(msg);
     toast('Mensagem copiada. Cole na conversa do WhatsApp.');
   },

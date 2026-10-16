@@ -58,7 +58,7 @@ export function instrucoes() {
         `Toque no botão ${ICONE_COMPARTILHAR} <b>Compartilhar</b> ${a.safari ? 'na barra do Safari (embaixo ou no alto da tela)' : 'ao lado da barra de endereço'}.`,
         `Role a lista e toque em ${ICONE_MAIS} <b>Adicionar à Tela de Início</b>.`,
         'Toque em <b>Adicionar</b>, no canto superior direito.',
-        'O ícone da <b>Jornada</b> aparece na tela inicial. Abra por ele, como um aplicativo.',
+        'O ícone do <b>Desafio 21 Dias</b> aparece na tela inicial. Abra por ele, como um aplicativo.',
       ],
     };
   }
@@ -90,14 +90,14 @@ export function instrucoes() {
         `Toque em ${ICONE_MENU} (três pontinhos) no canto superior direito do Chrome.`,
         'Toque em <b>Instalar app</b> (ou <b>Adicionar à tela inicial</b>).',
         'Confirme em <b>Instalar</b>.',
-        'O ícone da <b>Jornada</b> aparece na tela inicial e na lista de aplicativos.',
+        'O ícone do <b>Desafio 21 Dias</b> aparece na tela inicial e na lista de aplicativos.',
       ],
     };
   }
   return {
     titulo: 'Instalar no computador',
     passos: [
-      'No <b>Chrome</b> ou no <b>Edge</b>, clique no ícone de instalar na barra de endereço (à direita), ou abra o menu ⋮ e escolha <b>Instalar Jornada</b>.',
+      'No <b>Chrome</b> ou no <b>Edge</b>, clique no ícone de instalar na barra de endereço (à direita), ou abra o menu ⋮ e escolha <b>Instalar Desafio 21 Dias</b>.',
       'Confirme em <b>Instalar</b>. O app abre em janela própria.',
       'No <b>Safari do Mac</b>: menu <b>Arquivo › Adicionar ao Dock</b>.',
     ],
@@ -120,10 +120,10 @@ export function bannerInstalar() {
 
 export function cartaoInstalar() {
   if (jaInstalado()) {
-    return `<div class="card"><h3>App instalado</h3><p class="small muted" style="margin:0">Você está usando a Jornada como aplicativo.</p></div>`;
+    return `<div class="card"><h3>App instalado</h3><p class="small muted" style="margin:0">Você está usando o Desafio 21 Dias como aplicativo.</p></div>`;
   }
   return `<div class="card"><h3>Instalar o app</h3>
-    <p class="small">Coloque a Jornada na tela inicial do celular e abra como um aplicativo, sem digitar o endereço.</p>
+    <p class="small">Coloque o Desafio 21 Dias na tela inicial do celular e abra como um aplicativo, sem digitar o endereço.</p>
     <div class="btn-row">
       ${eventoInstalacao ? '<button class="btn" data-act="instalar-agora">Instalar agora</button>' : ''}
       <button class="btn ${eventoInstalacao ? 'ghost' : ''}" data-act="instalacao-abrir">Ver como instalar</button>
@@ -173,7 +173,7 @@ export const cliques = {
     eventoInstalacao.prompt();
     const { outcome } = await eventoInstalacao.userChoice;
     eventoInstalacao = null;
-    if (outcome === 'accepted') toast('App instalado. Procure a Jornada na tela inicial.');
+    if (outcome === 'accepted') toast('App instalado. Procure o Desafio 21 Dias na tela inicial.');
     app.render();
   },
 };

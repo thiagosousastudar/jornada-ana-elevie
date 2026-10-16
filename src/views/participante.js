@@ -212,7 +212,7 @@ function corpoLink(t) {
 function legenda(n) {
   const d = diaPorNumero(n);
   const perfis = (S.campanha.instagram || []).map((i) => i.usuario).join(' ');
-  return `Dia ${n} de 21 da Jornada Ana + Eleviê: ${d.tema} 💚\n\n${perfis}\n${S.campanha.hashtag || ''}`;
+  return `Dia ${n} de 21 do Desafio 21 Dias: ${d.tema} 💚\n\n${perfis}\n${S.campanha.hashtag || ''}`;
 }
 
 function kitCompartilhar(t, dia) {
@@ -604,7 +604,7 @@ export const cliques = {
     const n = Number(el.dataset.n) || diaHoje();
     api.registrarCta(S.campanha.id, S.perfil.id, n).catch(() => {});
     const numero = String(S.campanha.whatsapp_clinica || '').replace(/\D/g, '');
-    const msg = `Olá! Vim pela Jornada Ana + Eleviê e quero conversar sobre uma avaliação. Palavra-código: ${S.campanha.palavra_codigo || 'Jornada'}.`;
+    const msg = `Olá! Vim pelo Desafio 21 Dias e quero conversar sobre uma avaliação. Palavra-código: ${S.campanha.palavra_codigo || 'Jornada'}.`;
     if (numero) window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
     else toast('Fale com a clínica pelo WhatsApp e use a palavra-código ' + (S.campanha.palavra_codigo || 'Jornada') + '.');
   },
