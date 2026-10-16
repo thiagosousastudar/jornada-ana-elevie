@@ -237,7 +237,11 @@ document.addEventListener('click', async (e) => {
   e.preventDefault();
   const act = el.dataset.act;
   try {
-    if (act === 'google') { el.disabled = true; const { error } = await entrarComGoogle(); if (error) throw error; }
+    if (act === 'google') {
+      el.disabled = true;
+      const { error } = await entrarComGoogle();
+      if (error) throw error;
+    }
     else if (act === 'login-email') { S.ui = { passo: 'email', email: S.ui.email }; render(); }
     else if (act === 'login-inicio') { S.ui = {}; render(); }
     else if (act === 'sair') { await sair(); }

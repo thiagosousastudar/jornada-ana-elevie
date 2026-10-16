@@ -1,7 +1,24 @@
 import { supabase } from './supabase.js';
 
+// Pergunta ao Supabase se o login com Google está ativo antes de sair do app:
+// se não estiver, o redirecionamento cairia numa página de erro do Supabase.
+async function googleAtivo() {
+  try {
+    const r = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/settings`, {
+      headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
+    });
+    const cfg = await r.json();
+    return Boolean(cfg.external && cfg.external.google);
+  } catch {
+    return true; // na dúvida, tenta: o Supabase responde se não estiver ativo
+  }
+}
+
 // Do Google pedimos só o básico: nome, e-mail e foto (escopos padrão openid, email, profile).
-export function entrarComGoogle() {
+export async function entrarComGoogle() {
+  if (!(await googleAtivo())) {
+    return { error: new Error('O login com Google ainda não está disponível. Use o código no e-mail.') };
+  }
   return supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
