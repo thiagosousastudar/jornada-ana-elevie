@@ -43,6 +43,7 @@ function toast(msg) {
 
 function shell(inner, aba) {
   const abas = [['hoje', 'house', 'Hoje', '#/hoje'], ['avisos', 'bell', 'Avisos', '#/avisos']];
+  if (S.perfil && ['equipe', 'nelly', 'admin'].includes(S.perfil.papel)) abas.push(['equipe', 'grid', 'Equipe', '#/a']);
   const tab = aba ? `<nav class="tabbar glass" style="grid-template-columns:repeat(${abas.length},1fr)" aria-label="Navegação">${abas.map(([k, i, l, h]) => `<a href="${h}" class="${k === aba ? 'on' : ''}">${ic(i)}<span>${l}</span></a>`).join('')}</nav>` : '';
   return `<div class="phone-wrap"><div class="phone${aba ? ' has-tabs' : ''}"><div class="p-scroll" id="pscroll"><div class="screen enter">${inner}</div></div>${tab}</div></div>`;
 }
@@ -200,10 +201,14 @@ function telaTarefa(codigo) {
     <div class="notice info"><strong>Envio em breve</strong>O registro desta tarefa pelo app chega na próxima atualização.</div></div>`, 'hoje');
 }
 
+const NOME_PAPEL = { participante: 'participante', equipe: 'equipe', nelly: 'Dra. Nelly', admin: 'administradora' };
+const ehEquipe = () => ['equipe', 'nelly', 'admin'].includes(S.perfil.papel);
+
 function telaAvisos() {
   const p = S.perfil;
   return shell(`<div class="p-head"><h1>Avisos</h1></div><div class="p-body">
     <a class="task-card perfil-row" href="#/perfil"><span class="avatar">${esc((p.nome || '?').trim()[0] || '?')}</span><div class="t"><h3 style="margin:0">${esc(p.nome)}</h3><div class="reg">${esc(p.email)}</div></div><div class="trail">${ic('chevron', 'chev')}</div></a>
+    ${ehEquipe() ? `<a class="task-card perfil-row" href="#/a"><div class="ico caixinha">${ic('grid')}</div><div class="t"><h3 style="margin:0">Área da equipe</h3><div class="reg">Seu papel: ${esc(NOME_PAPEL[S.perfil.papel])}</div></div><div class="trail">${ic('chevron', 'chev')}</div></a>` : ''}
     <div class="card"><h3>Aviso de saúde</h3><p class="small" style="margin:0">${esc(S.campanha.aviso_saude)}</p></div>
     <div class="card"><h3>Precisa de ajuda?</h3><p class="small" style="margin:0">Dúvidas sobre o app: fale com a equipe pelo WhatsApp da jornada. Dúvidas sobre a sua saúde vão para a Dra. Nelly ou para a consulta.</p></div>
     <p style="text-align:center"><button class="linkbtn" data-act="sair">Sair</button></p></div>`, 'avisos');
@@ -255,7 +260,7 @@ async function render() {
     try { await carregarDados(); } catch (e) { app.innerHTML = falha(e.message); return; }
   }
   const [rota, arg] = location.hash.replace(/^#\/?/, '').split('/');
-  const equipe = ['equipe', 'nelly', 'admin'].includes(S.perfil.papel);
+  const equipe = ehEquipe();
   if (S.perfil.trocar_senha) { app.innerHTML = telaNovaSenha(); return; }
   if (!S.perfil.nome) { app.innerHTML = telaPerfil(false); return; }
   if (rota === 'a' && equipe) { app.innerHTML = telaEquipe(); return; }
