@@ -162,5 +162,28 @@ r = await tenta(U.bia, `update public.perfis set trocar_senha = false where id =
 r = await tenta(U.equipe, "select public.redefinir_senha('nelly@elevie.com', 'nova123')"); check(!r.ok && /admin/.test(r.erro), 'equipe não redefine a senha da Dra. Nelly');
 r = await tenta(ADMIN, "select public.redefinir_senha('nelly@elevie.com', 'nova123')"); check(r.ok, 'admin redefine a senha de alguém da equipe');
 
+console.log('Excluir cadastro:');
+r = await tenta(U.camila, `select public.enviar_caixinha('${camp}', 6, 'Pergunta com meu nome', 'rotina', false) as id`);
+const msgNome = r.rows[0].id;
+const d7 = (await db.query(`select id from public.dias where numero = 7`)).rows[0].id;
+await tenta(U.nelly, `update public.conteudos_nelly set status = 'aprovado' where dia_id = '${d7}'`);
+r = await tenta(U.equipe, "select public.excluir_cadastro('bia@hotmail.com')"); check(!r.ok && /admin/.test(r.erro), 'equipe não exclui cadastros');
+r = await tenta(U.camila, "select public.excluir_cadastro('bia@hotmail.com')"); check(!r.ok, 'participante não exclui cadastros');
+r = await tenta(ADMIN, "select public.excluir_cadastro('admin@elevie.com')"); check(!r.ok && /própria/.test(r.erro), 'admin não exclui a própria conta');
+r = await tenta(ADMIN, "select public.excluir_cadastro('ninguem@x.com')"); check(!r.ok && /Nenhuma conta/.test(r.erro), 'avisa quando o e-mail não existe');
+r = await tenta(ADMIN, "select public.excluir_cadastro('CAMILA@gmail.com')"); check(r.ok, 'admin exclui o cadastro de uma participante');
+check(await cnt(`select count(*) n from auth.users where id = '${U.camila}'`) === 0, 'conta de login apagada');
+check(await cnt(`select count(*) n from public.perfis where id = '${U.camila}'`) === 0, 'perfil apagado');
+check(await cnt(`select (select count(*) from public.registros where perfil_id = '${U.camila}') + (select count(*) from public.registros_privados where perfil_id = '${U.camila}') + (select count(*) from public.checkins where perfil_id = '${U.camila}') + (select count(*) from public.consentimentos where perfil_id = '${U.camila}') + (select count(*) from public.inscricoes where perfil_id = '${U.camila}') n`) === 0, 'registros, check-ins, consentimentos e inscrição apagados');
+check(await cnt(`select count(*) n from public.caixinha where id = '${msg}' and autor_id is null`) === 1, 'pergunta que está no mural continua, sem autora');
+check(await cnt(`select count(*) n from public.caixinha_autoria`) === 0, 'vínculo de autoria apagado');
+check(await cnt(`select count(*) n from public.caixinha where id = '${msgNome}'`) === 0, 'pergunta fora do mural é apagada');
+r = await tenta(ADMIN, `delete from storage.objects where bucket_id = 'evidencias' and name like '${U.camila}/%' returning id`); check(r.ok && r.rows.length === 1, 'admin apaga as fotos do cadastro excluído');
+r = await tenta(U.bia, `delete from storage.objects where bucket_id = 'evidencias' and name like '${U.equipe}/%' returning id`); check(r.ok && r.rows.length === 0, 'participante não apaga fotos de outra pessoa');
+r = await tenta(ADMIN, "select public.excluir_cadastro('equipe@elevie.com')"); check(r.ok, 'exclui alguém da equipe que já revisou registros');
+r = await tenta(ADMIN, "select public.excluir_cadastro('nelly@elevie.com')"); check(r.ok, 'exclui a Dra. Nelly mesmo com conteúdo aprovado por ela');
+check(await cnt(`select count(*) n from public.conteudos_nelly where dia_id = '${d7}' and status = 'aprovado'`) === 1, 'conteúdo aprovado continua aprovado');
+check(await cnt(`select count(*) n from public.alteracoes where resumo like 'Cadastro excluído%'`) === 3, 'cada exclusão fica no histórico, sem dados pessoais');
+
 console.log(`\n${ok} ok, ${falhas} falha(s)`);
 process.exit(falhas ? 1 : 0);

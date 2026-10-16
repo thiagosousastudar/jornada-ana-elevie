@@ -453,7 +453,19 @@ function acessos() {
           <label class="field"><span>Papel</span><select class="input" name="papel"><option value="equipe">Equipe (revisa e responde)</option><option value="nelly">Dra. Nelly (aprova conteúdo de saúde)</option><option value="admin">Administradora</option><option value="participante">Participante (remove o acesso à equipe)</option></select></label>
           <button class="btn ghost" type="submit">Definir papel</button></form>` : '<p class="tiny muted" style="margin-top:12px">Só uma administradora define papéis.</p>'}
       </div>
-    </div>`;
+    </div>
+    ${admin ? `<div class="card" style="margin-top:16px"><h2>Excluir cadastro</h2>
+      <p class="small muted">Apaga a conta e tudo que é dela: login, perfil, tarefas registradas, fotos de comprovação, check-ins e consentimentos. Perguntas da caixinha que já estão no mural continuam lá, sem o nome; as outras são apagadas. <strong>Não dá para desfazer.</strong></p>
+      <p class="tiny muted">O antes e depois do corpo fica só no celular da participante: ela mesma apaga em Progresso.</p>
+      <form data-form="excluir" novalidate>
+        <div class="two-col">
+          <label class="field"><span>E-mail do cadastro</span><input class="input" name="email" type="email" autocomplete="off" placeholder="pessoa@email.com"><div data-errfor="email"></div></label>
+          <label class="field"><span>Digite o e-mail de novo para confirmar</span><input class="input" name="confirma" type="email" autocomplete="off"><div data-errfor="confirma"></div></label>
+        </div>
+        <button class="btn danger" type="submit">Excluir cadastro definitivamente</button>
+      </form>
+      ${S.ui.excluido ? `<div class="notice ok" style="margin:16px 0 0"><strong>Cadastro excluído</strong>${esc(S.ui.excluido.email)}${S.ui.excluido.fotosOk ? ` · ${S.ui.excluido.fotos} foto(s) apagada(s)` : ' · As fotos não foram apagadas agora; avise o suporte técnico.'}</div>` : ''}
+    </div>` : ''}`;
 }
 
 function exportar() {
@@ -698,6 +710,19 @@ export const envios = {
     try { await api.definirPapel(email, String(fd.get('papel'))); } catch (e) { erros(form, [['email', e.message]]); return; }
     form.reset();
     await atualizar('Papel atualizado.');
+  },
+
+  excluir: async (form, fd) => {
+    const email = String(fd.get('email') || '').trim().toLowerCase();
+    const confirma = String(fd.get('confirma') || '').trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) { erros(form, [['email', 'Digite um e-mail válido.']]); return; }
+    if (confirma !== email) { erros(form, [['confirma', 'Os dois e-mails precisam ser iguais.']]); return; }
+    if (email === String(S.perfil.email || '').toLowerCase()) { erros(form, [['email', 'Você não pode excluir a sua própria conta.']]); return; }
+    let res;
+    try { res = await api.excluirCadastro(email); } catch (e) { erros(form, [['email', e.message]]); return; }
+    form.reset();
+    S.ui.excluido = { email, ...res };
+    await atualizar('Cadastro excluído.');
   },
 };
 

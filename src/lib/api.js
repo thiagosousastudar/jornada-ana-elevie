@@ -164,6 +164,24 @@ export async function registrarAlteracao(campanhaId, dia, por, resumo) {
   return ok(await supabase.from('alteracoes').insert({ campanha_id: campanhaId, dia, por, resumo }));
 }
 
+// Exclui o cadastro (só admin; regra no banco) e depois as fotos de comprovação da pessoa.
+export async function excluirCadastro(email) {
+  const id = ok(await supabase.rpc('excluir_cadastro', { p_email: email }));
+  let fotos = 0;
+  try {
+    for (;;) {
+      const lista = ok(await supabase.storage.from('evidencias').list(id, { limit: 100 }));
+      if (!lista.length) break;
+      ok(await supabase.storage.from('evidencias').remove(lista.map((f) => `${id}/${f.name}`)));
+      fotos += lista.length;
+      if (lista.length < 100) break;
+    }
+    return { fotos, fotosOk: true };
+  } catch {
+    return { fotos, fotosOk: false };
+  }
+}
+
 export async function definirPapel(email, papel) {
   return ok(await supabase.rpc('definir_papel', { p_email: email, p_papel: papel }));
 }
